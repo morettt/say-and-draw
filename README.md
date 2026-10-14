@@ -13,8 +13,8 @@
 
 ```bash
 #部署环境
-conda create -n saydray python=3.12 -y
-conda activate saydray
+conda create -n saydraw python=3.12 -y
+conda activate saydraw
 #下载依赖
 pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
 pip install -r requirements.txt
@@ -22,10 +22,20 @@ pip install -r requirements.txt
 
 CPU 也能尝试运行，速度会慢很多。此时可直接安装 `requirements.txt`，启动时加 `--device cpu`。
 
+## 下载模型
+
+在仓库根目录执行，权重会自动下载到 `models/`。再次运行会复用已下载的文件。
+
+```bash
+python download_model.py
+```
+
+模型地址：[morelle/SayAndDraw-v0.1](https://www.modelscope.cn/models/morelle/SayAndDraw-v0.1)。
+
 ## 启动网页
 
 ```bash
-python app.py --model-dir models --port 6006
+python app.py
 ```
 
 打开 <http://127.0.0.1:6006/>，可以输入“请你画一个数字3”，也可以发送普通聊天消息。服务默认只监听本机；要让局域网设备访问，可加 `--host 0.0.0.0`。

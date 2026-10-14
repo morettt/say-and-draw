@@ -29,7 +29,9 @@ class DrawingModel:
         decoder_file = model_dir / "residual_decoder.pt"
         for path in (llm_dir / "config.json", vq_file, decoder_file):
             if not path.exists():
-                raise FileNotFoundError(f"Missing model file: {path}")
+                raise FileNotFoundError(
+                    f"Missing model file: {path}. Run python download_model.py first."
+                )
 
         self.device = torch.device(device)
         dtype = torch.bfloat16 if self.device.type == "cuda" else torch.float32
@@ -208,7 +210,9 @@ def serve(model: DrawingModel, host: str, port: int):
 
 def main():
     parser = argparse.ArgumentParser(description="Run the SayAndDraw web interface")
-    parser.add_argument("--model-dir", type=Path, default=Path("models"))
+    parser.add_argument(
+        "--model-dir", type=Path, default=Path(__file__).resolve().parent / "models"
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=6006)
     parser.add_argument("--device", choices=("auto", "cuda", "cpu"), default="auto")
