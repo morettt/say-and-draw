@@ -22,25 +22,6 @@ pip install -r requirements.txt
 
 CPU 也能尝试运行，速度会慢很多。此时可直接安装 `requirements.txt`，启动时加 `--device cpu`。
 
-## 放置模型文件
-
-模型权重已发布在 [魔塔 SayAndDraw-v0.1](https://www.modelscope.cn/models/morelle/SayAndDraw-v0.1)。本代码仓库不包含权重。下载整个模型仓库后，将文件放入下列结构，或用 `--model-dir` 指向下载目录：
-
-```text
-models/
-├── llm/
-│   ├── config.json
-│   ├── model.safetensors
-│   ├── tokenizer.json
-│   ├── tokenizer_config.json
-│   ├── chat_template.jinja
-│   └── generation_config.json
-├── aligned_vq_smooth.pt
-└── residual_decoder.pt
-```
-
-`llm/` 是**从第一阶段权重继续训练统一输出格式**得到的第二阶段 Qwen 模型，另外两个 `.pt` 文件分别是配套码本和笔画解码器。这三个权重文件需配套使用。
-
 ## 启动网页
 
 ```bash
