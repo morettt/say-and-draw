@@ -11,12 +11,12 @@
 建议 Python 3.12、NVIDIA GPU 和 CUDA 12.4。下面是本项目验证过的 PyTorch 版本；其他环境可能需要换成对应的 PyTorch 安装命令。
 
 ```bash
-python -m venv .venv
-# Linux: source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
-python -m pip install -r requirements.txt
+#部署环境
+conda create -n saydray python=3.12 -y
+conda activate saydray
+#下载依赖
+pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
+pip install -r requirements.txt
 ```
 
 CPU 也能尝试运行，速度会慢很多。此时可直接安装 `requirements.txt`，启动时加 `--device cpu`。
