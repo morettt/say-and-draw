@@ -1,4 +1,4 @@
-﻿import sys,json,os,numpy as np,torch
+import sys,json,os,numpy as np,torch
 from pathlib import Path
 from PIL import Image,ImageDraw
 from PIL import ImageFilter
@@ -10,13 +10,13 @@ from causal_vq_model import CausalCodeLM
 from structured_decoder import StructuredStrokeDecoder
 torch.set_num_threads(4)
 chars='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'
-xy,labels,held=load();a=np.load(u/'digits_all.npz')
+xy,labels,held=load();a=np.load(u/'data'/'digits_all.npz')
 keep=[i for i,d in enumerate(a['digit']) if not(d==1 and np.any(a['points'][i,1:,2]>0))]
 pen=(a['points'][keep,:,2]>0)
 for i,c in enumerate(labels):
  if c in (4,5):pen[i]=False;pen[i,32 if c==4 else 54]=True
 pen[:,0]=True
-v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(u/'aligned_vq_smooth.pt',weights_only=False)['model'])
+v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(u/'data'/'aligned_vq_smooth.pt',weights_only=False)['model'])
 tag=os.getenv('EVAL_TAG','');cp=torch.load(os.getenv('GENERATOR',str(u/'control_gen_1600.pt')),weights_only=False)
 from conditioned_model import ConditionedCodeLM
 gen=(ConditionedCodeLM if cp.get('condition_all_positions') else CausalCodeLM)(cp['vocab']).cuda().eval();gen.load_state_dict(cp['model']);used=cp['used'].cuda()
@@ -99,4 +99,6 @@ for name in ['structured']:
  np.savez_compressed(str(u/(name+tag+'_eval.npz')),recon=y,recon_pen=p,free=fy,free_pen=fp,f1=ff,labels=gl)
  all_results[name]=r
 (u/('evaluation'+tag+'.json')).write_text(json.dumps(all_results,indent=2))
+
+
 
