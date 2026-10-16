@@ -19,7 +19,7 @@ p=torch.tensor(pen,device='cuda')
 tr=torch.tensor(np.where(~held)[0],device='cuda')
 va=torch.tensor(np.where(held)[0],device='cuda')
 vq=AlignedVQ().cuda().eval()
-vq.load_state_dict(torch.load(u/'aligned_vq_smooth.pt',weights_only=False)['model'])
+vq.load_state_dict(torch.load(u/'data'/'aligned_vq_smooth.pt',weights_only=False)['model'])
 with torch.no_grad():q=vq.book(vq.encode(x)[1]).detach()
 fullmask=(~p[:,1:]).float()[:,:,None]
 oldmask=torch.ones_like(fullmask);oldmask[labs==4,31]=0;oldmask[labs==5,53]=0
