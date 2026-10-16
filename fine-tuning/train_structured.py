@@ -1,13 +1,12 @@
-﻿import sys,json,time,numpy as np,torch
+import sys,json,time,numpy as np,torch
 from pathlib import Path
 u=Path(__file__).resolve().parent
 sys.path.insert(0,str(u))
 from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ
-from residual_decoder_model import ResidualDecoder
 torch.set_num_threads(4);torch.manual_seed(1901)
 xy,labels,held=load()
-a=np.load(u/'digits_all.npz')
+a=np.load(u/'data'/'digits_all.npz')
 keep=[i for i,d in enumerate(a['digit']) if not(d==1 and np.any(a['points'][i,1:,2]>0))]
 pen=(a['points'][keep,:,2]>0)
 for i,c in enumerate(labels):
@@ -42,7 +41,6 @@ def evaluate(m):
    endpoints=(y-x[va]).abs()[endpoint[va]].mean().item())
 weights=torch.ones(len(tr),device='cuda')
 weights[(labs[tr]>=10)|(labs[tr]==4)|(labs[tr]==5)]=2.5
-original=torch.load(u/'residual_decoder.pt',weights_only=False)['decoder']
 from structured_decoder import StructuredStrokeDecoder
 def resample(z):
  dist=np.r_[0,np.linalg.norm(np.diff(z,axis=0),axis=1).cumsum()]
@@ -88,4 +86,5 @@ for step in range(1,8001):
    torch.save({'model':m.state_dict(),'step':step,'score':g.item(),'count_correct':correct},str(u/'structured_decoder.pt'))
   print(json.dumps(dict(step=step,score=g.item(),coord=c.item(),endpoints=ep.item(),count=correct,total=len(va),seconds=round(time.time()-start))),flush=True)
 print('DONE',flush=True)
+
 
