@@ -1,6 +1,7 @@
-ï»¿# å…ˆå®‰è£…ä¸Žè‡ªå·± CUDA å¯¹åº”çš„ PyTorchã€‚
-# æœ¬å®žéªŒè®°å½•ä½¿ç”¨ CUDA 12.4 å¯¹åº”çš„ PyTorch 2.6.0ã€‚
+# ÏÈ°²×°Óë×Ô¼º CUDA ¶ÔÓ¦µÄ PyTorch¡£
+# ±¾ÊµÑé¼ÇÂ¼Ê¹ÓÃ CUDA 12.4 ¶ÔÓ¦µÄ PyTorch 2.6.0¡£
 --index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://pypi.org/simple
 torch==2.6.0
 
 numpy==1.26.4

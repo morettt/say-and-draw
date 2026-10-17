@@ -1,10 +1,10 @@
-ï»¿"""Mixed text/drawing continuation of the best digit+A-Z checkpoint."""
+"""Mixed text/drawing continuation of the best digit+A-Z checkpoint."""
 import json,random,time,sys,gc
 from pathlib import Path
 import numpy as np,torch
 from transformers import AutoTokenizer,Qwen3_5ForConditionalGeneration
 ROOT=Path(__file__).resolve().parent;SRC=ROOT/'runs'/'qwen_multiturn'/'best';OUT=ROOT/'runs'/'qwen_confirmation'
-OUT.mkdir(exist_ok=False);sys.path.insert(0,str(ROOT))
+OUT.mkdir(parents=True,exist_ok=False);sys.path.insert(0,str(ROOT))
 from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ
 SYSTEM='You are a helpful assistant. Reply normally. For drawing, say a short sentence and then emit <DRAW>, 16 motion codes, <END_DRAW>. Do not emit <CHAT>.'
@@ -20,86 +20,86 @@ tok=AutoTokenizer.from_pretrained(SRC);draw=tok.convert_tokens_to_ids('<DRAW>');
 def prefix(q,history=None):return tok.apply_chat_template([{'role':'system','content':SYSTEM}]+(history or [])+[{'role':'user','content':q}],tokenize=True,add_generation_prompt=True,enable_thinking=False)['input_ids']
 def textrow(q,a,history=None):
  p=prefix(q,history);return (p+tok.encode(a,add_special_tokens=False)+[tok.eos_token_id],len(p),None)
-templates=['è¯·å¸®æˆ‘å†™ä¸€ä¸ª{kind}{c}ã€‚','ç”»ä¸€ä¸ª{kind}{c}ç»™æˆ‘çœ‹çœ‹ã€‚','è¯·ç”¨æ‰‹å†™çš„æ–¹å¼å†™å‡º{c}ã€‚','å¸®æˆ‘ç”»{c}ã€‚','æˆ‘æƒ³çœ‹çœ‹{c}çš„ç¬”è¿¹ï¼Œè¯·ç”»å‡ºæ¥ã€‚','å†™ä¸€ä¸ª{c}ã€‚','è¯·ç”»ä¸€ä¸ª{kind}{c}ã€‚','Draw the character {c}.','Write character {c}.','Generate handwriting for {c}.']
+templates=['Çë°ïÎÒĞ´Ò»¸ö{kind}{c}¡£','»­Ò»¸ö{kind}{c}¸øÎÒ¿´¿´¡£','ÇëÓÃÊÖĞ´µÄ·½Ê½Ğ´³ö{c}¡£','°ïÎÒ»­{c}¡£','ÎÒÏë¿´¿´{c}µÄ±Ê¼££¬Çë»­³öÀ´¡£','Ğ´Ò»¸ö{c}¡£','Çë»­Ò»¸ö{kind}{c}¡£','Draw the character {c}.','Write character {c}.','Generate handwriting for {c}.']
 def drawrow(i,t=0):
- c=CHARS[lab[i]];q=templates[t].format(c=c,kind='æ•°å­—' if c.isdigit() else 'å­—æ¯');intro=f'å¥½çš„ï¼Œæˆ‘ç»™ä½ å†™ä¸€ä¸ª{c}ã€‚\n' if t<7 else f'Sure, here is {c}.\n';p=prefix(q);a=tok.encode(intro,add_special_tokens=False)+[draw];start=len(p)+len(a)
+ c=CHARS[lab[i]];q=templates[t].format(c=c,kind='Êı×Ö' if c.isdigit() else '×ÖÄ¸');intro=f'ºÃµÄ£¬ÎÒ¸øÄãĞ´Ò»¸ö{c}¡£\n' if t<7 else f'Sure, here is {c}.\n';p=prefix(q);a=tok.encode(intro,add_special_tokens=False)+[draw];start=len(p)+len(a)
  return p+a+[cid[int(z)] for z in raw[i]]+[end,tok.eos_token_id],len(p),start
-chat=[('ä½ å¥½','ä½ å¥½ï¼æœ‰ä»€ä¹ˆæƒ³èŠçš„ï¼Ÿ'),('ä½ å¥½å•Š','ä½ å¥½ï¼å¾ˆé«˜å…´å’Œä½ èŠå¤©ã€‚'),('æ‚¨å¥½','æ‚¨å¥½ï¼æˆ‘å¯ä»¥å¸®æ‚¨åšä»€ä¹ˆï¼Ÿ'),('è°¢è°¢','ä¸å®¢æ°”ï¼'),('å†è§','å†è§ï¼Œç¥ä½ ä»Šå¤©æ„‰å¿«ï¼'),('æ—©ä¸Šå¥½','æ—©ä¸Šå¥½ï¼ç¥ä½ æœ‰ç¾å¥½çš„ä¸€å¤©ã€‚'),('ä½ æ˜¯è°','æˆ‘æ˜¯ä¸€ä¸ªå¯ä»¥å›ç­”é—®é¢˜ã€èŠå¤©å’Œç”Ÿæˆæ‰‹å†™æ•°å­—ä¸å¤§å†™è‹±æ–‡å­—æ¯çš„åŠ©æ‰‹ã€‚'),('ä½ èƒ½åšä»€ä¹ˆ','æˆ‘å¯ä»¥å’Œä½ èŠå¤©ã€å›ç­”é—®é¢˜ï¼Œä¹Ÿå¯ä»¥æŒ‰è¦æ±‚å†™æ•°å­—å’Œå¤§å†™è‹±æ–‡å­—æ¯ã€‚'),('æˆ‘ä»¬èŠèŠå¤©å§','å¥½å‘€ï¼Œä½ æƒ³èŠä»€ä¹ˆï¼Ÿ'),('ä¸è¦ç”»å›¾ï¼Œé™ªæˆ‘èŠèŠ','å¥½çš„ï¼Œæˆ‘ä»¬åªèŠå¤©ã€‚ä½ ä»Šå¤©è¿‡å¾—æ€ä¹ˆæ ·ï¼Ÿ'),('æˆ‘ä»Šå¤©æœ‰ç‚¹éš¾è¿‡','å¬èµ·æ¥ä½ ä»Šå¤©ä¸å¤ªå¼€å¿ƒã€‚æ„¿æ„è¯´è¯´å‘ç”Ÿäº†ä»€ä¹ˆå—ï¼Ÿ'),('æˆ‘æœ‰ç‚¹ç´¯','è¾›è‹¦äº†ï¼Œå…ˆä¼‘æ¯ä¸€ä¼šå„¿ã€å–ç‚¹æ°´å§ã€‚'),('è®²ä¸€ä¸ªç¬‘è¯','ä¸ºä»€ä¹ˆç”µè„‘æ€»æ˜¯å¾ˆå†·ï¼Ÿå› ä¸ºå®ƒå¼€äº†å¤ªå¤šçª—å£ã€‚'),('ä»‹ç»ä¸€ä¸‹ç†ŠçŒ«','å¤§ç†ŠçŒ«æ˜¯ä¸­å›½çš„çç¨€å“ºä¹³åŠ¨ç‰©ï¼Œä¸»è¦ä»¥ç«¹å­ä¸ºé£Ÿã€‚'),('å¤©ç©ºä¸ºä»€ä¹ˆæ˜¯è“è‰²çš„','é˜³å…‰ç»è¿‡å¤§æ°”æ—¶ï¼Œè“å…‰æ¯”çº¢å…‰æ›´å®¹æ˜“è¢«æ•£å°„ï¼Œå› æ­¤å¤©ç©ºé€šå¸¸çœ‹èµ·æ¥æ˜¯è“è‰²çš„ã€‚'),('æ°´åœ¨å‡ æ‘„æ°åº¦ç»“å†°','åœ¨æ ‡å‡†å¤§æ°”å‹ä¸‹ï¼Œçº¯æ°´é€šå¸¸åœ¨é›¶æ‘„æ°åº¦ç»“å†°ã€‚'),('ä¸­å›½çš„é¦–éƒ½æ˜¯å“ªé‡Œ','ä¸­å›½çš„é¦–éƒ½æ˜¯åŒ—äº¬ã€‚'),('ä¸€å¹´æœ‰å‡ ä¸ªæœˆ','ä¸€å¹´æœ‰åäºŒä¸ªæœˆã€‚'),('ä¸€å‘¨æœ‰å‡ å¤©','ä¸€å‘¨æœ‰ä¸ƒå¤©ã€‚'),('å¸®æˆ‘å®‰æ’å­¦ä¹ æ—¶é—´','å¯ä»¥å…ˆå­¦ä¹ äºŒåäº”åˆ†é’Ÿï¼Œå†ä¼‘æ¯äº”åˆ†é’Ÿï¼ŒæŒ‰ä»»åŠ¡éš¾åº¦è°ƒæ•´ã€‚'),('ä¸ºä»€ä¹ˆéœ€è¦ç¡è§‰','ç¡çœ å¸®åŠ©èº«ä½“æ¢å¤ï¼Œä¹Ÿæœ‰åŠ©äºè®°å¿†å’Œæ³¨æ„åŠ›ã€‚'),('ä»Šå¤©çš„å¤©æ°”æ€ä¹ˆæ ·','æˆ‘æ²¡æœ‰å®æ—¶å¤©æ°”ä¿¡æ¯ã€‚ä½ å¯ä»¥å‘Šè¯‰æˆ‘æ‰€åœ¨åŸå¸‚ï¼Œæˆ–æŸ¥çœ‹å½“åœ°å¤©æ°”é¢„æŠ¥ã€‚'),('ä½ èƒ½ç”»çŒ«å—','ç›®å‰æˆ‘ä¸»è¦æ”¯æŒæ‰‹å†™æ•°å­—å’Œå¤§å†™è‹±æ–‡å­—æ¯ï¼Œè¿˜ä¸èƒ½å¯é åœ°ç”»çŒ«ã€‚'),('è¯·ç”»ä¸€åªçŒ«','ç›®å‰æˆ‘è¿˜ä¸èƒ½å¯é åœ°ç”»çŒ«ï¼Œå¯ä»¥å¸®ä½ å†™ä¸€ä¸ªæ•°å­—æˆ–å¤§å†™è‹±æ–‡å­—æ¯ã€‚'),('ä½ èƒ½å†™ä¸­æ–‡å—','ç›®å‰æ‰‹å†™éƒ¨åˆ†ä¸»è¦æ”¯æŒæ•°å­—å’Œå¤§å†™è‹±æ–‡å­—æ¯ï¼Œä¸­æ–‡å¯ä»¥ç”¨æ–‡å­—å›å¤ã€‚'),('Hello','Hello! How can I help you?'),('How are you?','I am ready to help. How are you?'),('Do not draw. Just say hello.','Hello!'),('What can you do?','I can chat, answer questions, and draw handwritten digits and uppercase letters.')]
+chat=[('ÄãºÃ','ÄãºÃ£¡ÓĞÊ²Ã´ÏëÁÄµÄ£¿'),('ÄãºÃ°¡','ÄãºÃ£¡ºÜ¸ßĞËºÍÄãÁÄÌì¡£'),('ÄúºÃ','ÄúºÃ£¡ÎÒ¿ÉÒÔ°ïÄú×öÊ²Ã´£¿'),('Ğ»Ğ»','²»¿ÍÆø£¡'),('ÔÙ¼û','ÔÙ¼û£¬×£Äã½ñÌìÓä¿ì£¡'),('ÔçÉÏºÃ','ÔçÉÏºÃ£¡×£ÄãÓĞÃÀºÃµÄÒ»Ìì¡£'),('ÄãÊÇË­','ÎÒÊÇÒ»¸ö¿ÉÒÔ»Ø´ğÎÊÌâ¡¢ÁÄÌìºÍÉú³ÉÊÖĞ´Êı×ÖÓë´óĞ´Ó¢ÎÄ×ÖÄ¸µÄÖúÊÖ¡£'),('ÄãÄÜ×öÊ²Ã´','ÎÒ¿ÉÒÔºÍÄãÁÄÌì¡¢»Ø´ğÎÊÌâ£¬Ò²¿ÉÒÔ°´ÒªÇóĞ´Êı×ÖºÍ´óĞ´Ó¢ÎÄ×ÖÄ¸¡£'),('ÎÒÃÇÁÄÁÄÌì°É','ºÃÑ½£¬ÄãÏëÁÄÊ²Ã´£¿'),('²»Òª»­Í¼£¬ÅãÎÒÁÄÁÄ','ºÃµÄ£¬ÎÒÃÇÖ»ÁÄÌì¡£Äã½ñÌì¹ıµÃÔõÃ´Ñù£¿'),('ÎÒ½ñÌìÓĞµãÄÑ¹ı','ÌıÆğÀ´Äã½ñÌì²»Ì«¿ªĞÄ¡£Ô¸ÒâËµËµ·¢ÉúÁËÊ²Ã´Âğ£¿'),('ÎÒÓĞµãÀÛ','ĞÁ¿àÁË£¬ÏÈĞİÏ¢Ò»»á¶ù¡¢ºÈµãË®°É¡£'),('½²Ò»¸öĞ¦»°','ÎªÊ²Ã´µçÄÔ×ÜÊÇºÜÀä£¿ÒòÎªËü¿ªÁËÌ«¶à´°¿Ú¡£'),('½éÉÜÒ»ÏÂĞÜÃ¨','´óĞÜÃ¨ÊÇÖĞ¹úµÄÕäÏ¡²¸Èé¶¯Îï£¬Ö÷ÒªÒÔÖñ×ÓÎªÊ³¡£'),('Ìì¿ÕÎªÊ²Ã´ÊÇÀ¶É«µÄ','Ñô¹â¾­¹ı´óÆøÊ±£¬À¶¹â±Èºì¹â¸üÈİÒ×±»É¢Éä£¬Òò´ËÌì¿ÕÍ¨³£¿´ÆğÀ´ÊÇÀ¶É«µÄ¡£'),('Ë®ÔÚ¼¸ÉãÊÏ¶È½á±ù','ÔÚ±ê×¼´óÆøÑ¹ÏÂ£¬´¿Ë®Í¨³£ÔÚÁãÉãÊÏ¶È½á±ù¡£'),('ÖĞ¹úµÄÊ×¶¼ÊÇÄÄÀï','ÖĞ¹úµÄÊ×¶¼ÊÇ±±¾©¡£'),('Ò»ÄêÓĞ¼¸¸öÔÂ','Ò»ÄêÓĞÊ®¶ş¸öÔÂ¡£'),('Ò»ÖÜÓĞ¼¸Ìì','Ò»ÖÜÓĞÆßÌì¡£'),('°ïÎÒ°²ÅÅÑ§Ï°Ê±¼ä','¿ÉÒÔÏÈÑ§Ï°¶şÊ®Îå·ÖÖÓ£¬ÔÙĞİÏ¢Îå·ÖÖÓ£¬°´ÈÎÎñÄÑ¶Èµ÷Õû¡£'),('ÎªÊ²Ã´ĞèÒªË¯¾õ','Ë¯Ãß°ïÖúÉíÌå»Ö¸´£¬Ò²ÓĞÖúÓÚ¼ÇÒäºÍ×¢ÒâÁ¦¡£'),('½ñÌìµÄÌìÆøÔõÃ´Ñù','ÎÒÃ»ÓĞÊµÊ±ÌìÆøĞÅÏ¢¡£Äã¿ÉÒÔ¸æËßÎÒËùÔÚ³ÇÊĞ£¬»ò²é¿´µ±µØÌìÆøÔ¤±¨¡£'),('ÄãÄÜ»­Ã¨Âğ','Ä¿Ç°ÎÒÖ÷ÒªÖ§³ÖÊÖĞ´Êı×ÖºÍ´óĞ´Ó¢ÎÄ×ÖÄ¸£¬»¹²»ÄÜ¿É¿¿µØ»­Ã¨¡£'),('Çë»­Ò»Ö»Ã¨','Ä¿Ç°ÎÒ»¹²»ÄÜ¿É¿¿µØ»­Ã¨£¬¿ÉÒÔ°ïÄãĞ´Ò»¸öÊı×Ö»ò´óĞ´Ó¢ÎÄ×ÖÄ¸¡£'),('ÄãÄÜĞ´ÖĞÎÄÂğ','Ä¿Ç°ÊÖĞ´²¿·ÖÖ÷ÒªÖ§³ÖÊı×ÖºÍ´óĞ´Ó¢ÎÄ×ÖÄ¸£¬ÖĞÎÄ¿ÉÒÔÓÃÎÄ×Ö»Ø¸´¡£'),('Hello','Hello! How can I help you?'),('How are you?','I am ready to help. How are you?'),('Do not draw. Just say hello.','Hello!'),('What can you do?','I can chat, answer questions, and draw handwritten digits and uppercase letters.')]
 for c in CHARS:
- kind='æ•°å­—' if c.isdigit() else 'å¤§å†™è‹±æ–‡å­—æ¯'
- chat.extend([(f'{c}æ˜¯ä»€ä¹ˆï¼Ÿ',f'{c}æ˜¯ä¸€ä¸ª{kind}ã€‚'),(f'ä¸è¦ç”»ï¼Œå‘Šè¯‰æˆ‘{c}æ˜¯ä»€ä¹ˆã€‚',f'{c}æ˜¯ä¸€ä¸ª{kind}ã€‚'),(f'ä½ ä¼šå†™{c}å—ï¼Ÿ',f'ä¼šï¼Œæˆ‘å¯ä»¥æŒ‰è¦æ±‚å†™å‡º{c}ã€‚'),(f'åªç”¨æ–‡å­—å›ç­”ï¼Œä½ èƒ½ç”»{c}å—ï¼Ÿ',f'èƒ½ï¼Œæˆ‘å¯ä»¥ç”»{c}ã€‚'),(f'æˆ‘æåˆ°äº†{c}ï¼Œä½†ä¸éœ€è¦ä½ ç”»å‡ºæ¥ã€‚','å¥½çš„ï¼Œæˆ‘åªå›å¤æ–‡å­—ã€‚'),(f'Tell me what {c} is. Do not draw.',f'{c} is a '+('digit.' if c.isdigit() else 'capital letter.'))])
+ kind='Êı×Ö' if c.isdigit() else '´óĞ´Ó¢ÎÄ×ÖÄ¸'
+ chat.extend([(f'{c}ÊÇÊ²Ã´£¿',f'{c}ÊÇÒ»¸ö{kind}¡£'),(f'²»Òª»­£¬¸æËßÎÒ{c}ÊÇÊ²Ã´¡£',f'{c}ÊÇÒ»¸ö{kind}¡£'),(f'Äã»áĞ´{c}Âğ£¿',f'»á£¬ÎÒ¿ÉÒÔ°´ÒªÇóĞ´³ö{c}¡£'),(f'Ö»ÓÃÎÄ×Ö»Ø´ğ£¬ÄãÄÜ»­{c}Âğ£¿',f'ÄÜ£¬ÎÒ¿ÉÒÔ»­{c}¡£'),(f'ÎÒÌáµ½ÁË{c}£¬µ«²»ĞèÒªÄã»­³öÀ´¡£','ºÃµÄ£¬ÎÒÖ»»Ø¸´ÎÄ×Ö¡£'),(f'Tell me what {c} is. Do not draw.',f'{c} is a '+('digit.' if c.isdigit() else 'capital letter.'))])
 for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
- chat.extend([(f'å­—æ¯{c}çš„å°å†™æ˜¯ä»€ä¹ˆï¼Ÿ',f'å­—æ¯{c}çš„å°å†™æ˜¯{c.lower()}ã€‚'),(f'ä¸è¦ç”»ï¼Œ{c}æ˜¯ç¬¬å‡ ä¸ªå­—æ¯ï¼Ÿ',f'{c}æ˜¯è‹±æ–‡å­—æ¯è¡¨ä¸­çš„ç¬¬{ord(c)-64}ä¸ªå­—æ¯ã€‚')])
+ chat.extend([(f'×ÖÄ¸{c}µÄĞ¡Ğ´ÊÇÊ²Ã´£¿',f'×ÖÄ¸{c}µÄĞ¡Ğ´ÊÇ{c.lower()}¡£'),(f'²»Òª»­£¬{c}ÊÇµÚ¼¸¸ö×ÖÄ¸£¿',f'{c}ÊÇÓ¢ÎÄ×ÖÄ¸±íÖĞµÄµÚ{ord(c)-64}¸ö×ÖÄ¸¡£')])
 for a in range(10):
- for b in [1,3,5]:chat.append((f'{a}+{b}ç­‰äºå¤šå°‘ï¼Ÿ',f'{a}åŠ {b}ç­‰äº{a+b}ã€‚'))
+ for b in [1,3,5]:chat.append((f'{a}+{b}µÈÓÚ¶àÉÙ£¿',f'{a}¼Ó{b}µÈÓÚ{a+b}¡£'))
 chat=[(q,a) for q,a in chat if any(ord(z)>127 for z in q)]
 chat_rows=[textrow(q,a) for q,a in chat]
 # Short multi-turn examples teach the same interface used by the deployed chat page.
 for c in CHARS:
- chat_rows.append(textrow('å…ˆåˆ«ç”»ï¼Œå‘Šè¯‰æˆ‘ä½ å‡†å¤‡å†™ä»€ä¹ˆã€‚',f'æˆ‘å‡†å¤‡å†™{c}ã€‚',[{'role':'user','content':f'æˆ‘æƒ³å†™{c}ã€‚'},{'role':'assistant','content':f'ä½ æƒ³è®©æˆ‘å¸®ä½ å†™{c}å—ï¼Ÿ'}]))
+ chat_rows.append(textrow('ÏÈ±ğ»­£¬¸æËßÎÒÄã×¼±¸Ğ´Ê²Ã´¡£',f'ÎÒ×¼±¸Ğ´{c}¡£',[{'role':'user','content':f'ÎÒÏëĞ´{c}¡£'},{'role':'assistant','content':f'ÄãÏëÈÃÎÒ°ïÄãĞ´{c}Âğ£¿'}]))
 draw_rows={i:[drawrow(i,t) for t in range(len(templates))] for i in tr+va}
 # Inserted into the training script after single-turn rows have been constructed.
 byclass={c:[i for i in tr if lab[i]==c] for c in range(36)}
 hr=random.Random(9016)
 def ink_answer(i):
  c=CHARS[lab[i]]
- return f'å¥½çš„ï¼Œæˆ‘ç»™ä½ å†™ä¸€ä¸ª{c}ã€‚\n<DRAW>'+''.join(f'<M{int(z):03d}>' for z in raw[i])+'<END_DRAW>'
+ return f'ºÃµÄ£¬ÎÒ¸øÄãĞ´Ò»¸ö{c}¡£\n<DRAW>'+''.join(f'<M{int(z):03d}>' for z in raw[i])+'<END_DRAW>'
 def make_history(classes):
  h=[]
  for c in classes:
-  i=hr.choice(byclass[c]);h.extend([{'role':'user','content':f'å¸®æˆ‘å†™ä¸€ä¸ª{CHARS[c]}ã€‚'},{'role':'assistant','content':ink_answer(i)}])
+  i=hr.choice(byclass[c]);h.extend([{'role':'user','content':f'°ïÎÒĞ´Ò»¸ö{CHARS[c]}¡£'},{'role':'assistant','content':ink_answer(i)}])
  return h
 def make_draw(i,q,h):
- c=CHARS[lab[i]];p=prefix(q,h);a=tok.encode(f'å¥½çš„ï¼Œè¿™æ¬¡å†™{c}ã€‚\n',add_special_tokens=False)+[draw]
+ c=CHARS[lab[i]];p=prefix(q,h);a=tok.encode(f'ºÃµÄ£¬Õâ´ÎĞ´{c}¡£\n',add_special_tokens=False)+[draw]
  return p+a+[cid[int(z)] for z in raw[i]]+[end,tok.eos_token_id],len(p),len(p)+len(a)
 for i in tr:
  c=CHARS[lab[i]]
  # Chinese-only new draw instructions, plus the original Chinese single-turn rows.
  draw_rows[i]=draw_rows[i][:7]
- for j,q in enumerate([f'æ¥ä¸‹æ¥æ”¹æˆ{c}ã€‚',f'åˆšæ‰é‚£ä¸ªä¸è¦äº†ï¼Œå†™{c}ã€‚',f'ä½ ç”»é”™äº†ï¼Œæˆ‘è¦çš„æ˜¯{c}ï¼Œè¯·é‡æ–°å†™ã€‚',f'ç°åœ¨è¯·å†™{c}ï¼Œä¸è¦é‡å¤å‰ä¸€ä¸ªã€‚',f'è¿™æ¬¡æˆ‘è¦çš„æ˜¯{"æ•°å­—" if c.isdigit() else "å­—æ¯"}{c}ã€‚',f'è°¢è°¢ã€‚å†å¸®æˆ‘ç”»ä¸€ä¸ª{c}ã€‚']):
+ for j,q in enumerate([f'½ÓÏÂÀ´¸Ä³É{c}¡£',f'¸Õ²ÅÄÇ¸ö²»ÒªÁË£¬Ğ´{c}¡£',f'Äã»­´íÁË£¬ÎÒÒªµÄÊÇ{c}£¬ÇëÖØĞÂĞ´¡£',f'ÏÖÔÚÇëĞ´{c}£¬²»ÒªÖØ¸´Ç°Ò»¸ö¡£',f'Õâ´ÎÎÒÒªµÄÊÇ{"Êı×Ö" if c.isdigit() else "×ÖÄ¸"}{c}¡£',f'Ğ»Ğ»¡£ÔÙ°ïÎÒ»­Ò»¸ö{c}¡£']):
   previous=hr.randrange(10) if not c.isdigit() else hr.randrange(10,36)
   sequence=[previous] if j%2==0 else [hr.randrange(36),previous]
   draw_rows[i].append(make_draw(i,q,make_history(sequence)))
   old=CHARS[previous]
-  draw_rows[i].append(make_draw(i,f'ä¸è¦å†™{old}äº†ï¼Œæˆ‘ç°åœ¨è¦{c}ã€‚',make_history(sequence)))
- draw_rows[i].append(make_draw(i,'å†å†™ä¸€éåˆšæ‰çš„é‚£ä¸ªã€‚',make_history([lab[i]])))
+  draw_rows[i].append(make_draw(i,f'²»ÒªĞ´{old}ÁË£¬ÎÒÏÖÔÚÒª{c}¡£',make_history(sequence)))
+ draw_rows[i].append(make_draw(i,'ÔÙĞ´Ò»±é¸Õ²ÅµÄÄÇ¸ö¡£',make_history([lab[i]])))
 for c in range(36):
  char=CHARS[c];h=make_history([c])
- for q,a in [('å¥½äº†ï¼Œåœä¸‹ï¼Œä¸è¦å†ç”»äº†ã€‚','å¥½çš„ï¼Œæˆ‘åœæ­¢ç”»å›¾ã€‚'),('ç°åœ¨åªèŠå¤©ã€‚ä½ å¥½ï¼','ä½ å¥½ï¼æˆ‘ä»¬æ¥ä¸‹æ¥åªèŠå¤©ã€‚'),('ä¸è¦å†ç”»ï¼Œå‘Šè¯‰æˆ‘åˆšæ‰å†™çš„æ˜¯ä»€ä¹ˆã€‚',f'åˆšæ‰å†™çš„æ˜¯{char}ã€‚'),('æˆ‘æ²¡è®©ä½ ç»§ç»­å†™ã€‚','æ˜ç™½ï¼Œæˆ‘ä¼šç­‰ä½ æå‡ºæ–°çš„è¦æ±‚ã€‚'),('ä¸ç”»äº†ï¼Œå‘Šè¯‰æˆ‘2åŠ 3çš„ç­”æ¡ˆã€‚','2åŠ 3ç­‰äº5ã€‚'),('ä¸è¦ç”»ï¼Œå­—æ¯Açš„å°å†™æ˜¯ä»€ä¹ˆï¼Ÿ','å­—æ¯Açš„å°å†™æ˜¯aã€‚'),('ä¸‹ä¸€æ­¥å…ˆåˆ«åŠ¨ç¬”ï¼Œè§£é‡Šä¸€ä¸‹è‹±æ–‡å­—æ¯ã€‚','è‹±æ–‡å­—æ¯æ˜¯ç”¨æ¥ä¹¦å†™è‹±è¯­çš„ç¬¦å·ï¼Œå…±æœ‰äºŒåå…­ä¸ªã€‚')]:
+ for q,a in [('ºÃÁË£¬Í£ÏÂ£¬²»ÒªÔÙ»­ÁË¡£','ºÃµÄ£¬ÎÒÍ£Ö¹»­Í¼¡£'),('ÏÖÔÚÖ»ÁÄÌì¡£ÄãºÃ£¡','ÄãºÃ£¡ÎÒÃÇ½ÓÏÂÀ´Ö»ÁÄÌì¡£'),('²»ÒªÔÙ»­£¬¸æËßÎÒ¸Õ²ÅĞ´µÄÊÇÊ²Ã´¡£',f'¸Õ²ÅĞ´µÄÊÇ{char}¡£'),('ÎÒÃ»ÈÃÄã¼ÌĞøĞ´¡£','Ã÷°×£¬ÎÒ»áµÈÄãÌá³öĞÂµÄÒªÇó¡£'),('²»»­ÁË£¬¸æËßÎÒ2¼Ó3µÄ´ğ°¸¡£','2¼Ó3µÈÓÚ5¡£'),('²»Òª»­£¬×ÖÄ¸AµÄĞ¡Ğ´ÊÇÊ²Ã´£¿','×ÖÄ¸AµÄĞ¡Ğ´ÊÇa¡£'),('ÏÂÒ»²½ÏÈ±ğ¶¯±Ê£¬½âÊÍÒ»ÏÂÓ¢ÎÄ×ÖÄ¸¡£','Ó¢ÎÄ×ÖÄ¸ÊÇÓÃÀ´ÊéĞ´Ó¢ÓïµÄ·ûºÅ£¬¹²ÓĞ¶şÊ®Áù¸ö¡£')]:
   chat_rows.append(textrow(q,a,h))
 # Additional varied negatives, with answers addressing the actual question.
 for c in CHARS:
- for q,a in [(f'å…ˆä¸è¦ç”»{c}ï¼Œè¯´è¯´å®ƒæ˜¯ä»€ä¹ˆã€‚',f'{c}æ˜¯ä¸€ä¸ª'+('æ•°å­—ã€‚' if c.isdigit() else 'å¤§å†™è‹±æ–‡å­—æ¯ã€‚')),(f'æˆ‘åªé—®ä½ ä¼šä¸ä¼šå†™{c}ï¼Œä¸ç”¨å†™å‡ºæ¥ã€‚',f'ä¼šï¼Œæˆ‘å¯ä»¥å†™{c}ã€‚')]:chat_rows.append(textrow(q,a))
- for q in [f'æš‚æ—¶ä¸ç”»ï¼Œè¯·è§£é‡Š{c}ã€‚',f'è¿™é‡Œåªéœ€è¦å›ç­”é—®é¢˜ï¼š{c}æ˜¯ä»€ä¹ˆï¼Ÿ',f'æˆ‘ä¸æƒ³è¦ç¬”è¿¹ï¼Œè¯·ä»‹ç»ä¸€ä¸‹{c}ã€‚']:
-  chat_rows.append(textrow(q,f'{c}æ˜¯ä¸€ä¸ª'+('æ•°å­—ã€‚' if c.isdigit() else 'å¤§å†™è‹±æ–‡å­—æ¯ã€‚')))
+ for q,a in [(f'ÏÈ²»Òª»­{c}£¬ËµËµËüÊÇÊ²Ã´¡£',f'{c}ÊÇÒ»¸ö'+('Êı×Ö¡£' if c.isdigit() else '´óĞ´Ó¢ÎÄ×ÖÄ¸¡£')),(f'ÎÒÖ»ÎÊÄã»á²»»áĞ´{c}£¬²»ÓÃĞ´³öÀ´¡£',f'»á£¬ÎÒ¿ÉÒÔĞ´{c}¡£')]:chat_rows.append(textrow(q,a))
+ for q in [f'ÔİÊ±²»»­£¬Çë½âÊÍ{c}¡£',f'ÕâÀïÖ»ĞèÒª»Ø´ğÎÊÌâ£º{c}ÊÇÊ²Ã´£¿',f'ÎÒ²»ÏëÒª±Ê¼££¬Çë½éÉÜÒ»ÏÂ{c}¡£']:
+  chat_rows.append(textrow(q,f'{c}ÊÇÒ»¸ö'+('Êı×Ö¡£' if c.isdigit() else '´óĞ´Ó¢ÎÄ×ÖÄ¸¡£')))
 for a in range(10):
  for b in [2,4,6]:
-  chat_rows.append(textrow(f'åªç”¨æ–‡å­—å›ç­”ï¼Œ{a}åŠ {b}æ˜¯å¤šå°‘ï¼Ÿ',f'{a}åŠ {b}ç­‰äº{a+b}ã€‚',make_history([hr.randrange(36)])))
+  chat_rows.append(textrow(f'Ö»ÓÃÎÄ×Ö»Ø´ğ£¬{a}¼Ó{b}ÊÇ¶àÉÙ£¿',f'{a}¼Ó{b}µÈÓÚ{a+b}¡£',make_history([hr.randrange(36)])))
 # Capability boundaries: this version supports one character per request.
-for q in ['å¸®æˆ‘å†™HELLO','ä¸€æ¬¡å†™å‡º123','ç”»ä¸€åªçŒ«','å¸®æˆ‘ç”»ä¸€æ ‹æˆ¿å­','å†™ä¸€ä¸ªæ±‰å­—å¥½']:
- chat_rows.append(textrow(q,'ç›®å‰æˆ‘ä¸€æ¬¡èƒ½æ‰‹å†™ä¸€ä¸ªæ•°å­—æˆ–å¤§å†™è‹±æ–‡å­—æ¯ï¼Œè¯·æŒ‡å®šä¸€ä¸ªå­—ç¬¦ã€‚'))
-for c in 'abcdefghijklmnopqrstuvwxyz':chat_rows.append(textrow(f'è¯·å†™ä¸€ä¸ªå°å†™{c}ã€‚',f'ç›®å‰æ‰‹å†™éƒ¨åˆ†æ”¯æŒå¤§å†™å­—æ¯ï¼Œå¯ä»¥å¸®ä½ å†™{c.upper()}ã€‚'))
+for q in ['°ïÎÒĞ´HELLO','Ò»´ÎĞ´³ö123','»­Ò»Ö»Ã¨','°ïÎÒ»­Ò»¶°·¿×Ó','Ğ´Ò»¸öºº×ÖºÃ']:
+ chat_rows.append(textrow(q,'Ä¿Ç°ÎÒÒ»´ÎÄÜÊÖĞ´Ò»¸öÊı×Ö»ò´óĞ´Ó¢ÎÄ×ÖÄ¸£¬ÇëÖ¸¶¨Ò»¸ö×Ö·û¡£'))
+for c in 'abcdefghijklmnopqrstuvwxyz':chat_rows.append(textrow(f'ÇëĞ´Ò»¸öĞ¡Ğ´{c}¡£',f'Ä¿Ç°ÊÖĞ´²¿·ÖÖ§³Ö´óĞ´×ÖÄ¸£¬¿ÉÒÔ°ïÄãĞ´{c.upper()}¡£'))
 (OUT/'multiturn_recipe.json').write_text(json.dumps({'draw_variants_per_sample':len(draw_rows[tr[0]]),'chat_rows':len(chat_rows),'history_contains_actual_codes':True,'history_source':'training split only','seed':9016},ensure_ascii=False,indent=2))
 
 for i in tr:
  target=CHARS[lab[i]]
- for j,confirm in enumerate(['é‚£ä½ ç”»å§','é‚£å°±ç”»å‡ºæ¥å§','å¥½ï¼Œå¼€å§‹å§','å¯ä»¥ï¼Œå†™å‡ºæ¥','è¡Œï¼Œå¸®æˆ‘å†™å§','é‚£ä½ è¯•è¯•çœ‹','å¥½ï¼Œç”»ç»™æˆ‘çœ‹','ç°åœ¨ç”»å§','é‚£ä½ ç”»å§','å¥½ï¼Œå¼€å§‹å§','é‚£å°±å†™å§','å¼€å§‹']):
+ for j,confirm in enumerate(['ÄÇÄã»­°É','ÄÇ¾Í»­³öÀ´°É','ºÃ£¬¿ªÊ¼°É','¿ÉÒÔ£¬Ğ´³öÀ´','ĞĞ£¬°ïÎÒĞ´°É','ÄÇÄãÊÔÊÔ¿´','ºÃ£¬»­¸øÎÒ¿´','ÏÖÔÚ»­°É','ÄÇÄã»­°É','ºÃ£¬¿ªÊ¼°É','ÄÇ¾ÍĞ´°É','¿ªÊ¼']):
   oldclass=hr.choice([x for x in range(36) if x!=lab[i]]);old=CHARS[oldclass];oldi=hr.choice(byclass[oldclass])
-  h=[{'role':'user','content':f'èƒ½ç»™æˆ‘ç”»ä¸€ä¸ª{old}å—'},{'role':'assistant','content':f'èƒ½ï¼Œæˆ‘å¯ä»¥ç”»{old}ã€‚'},{'role':'user','content':'é‚£ä½ ç”»å§'},{'role':'assistant','content':ink_answer(oldi)}]
+  h=[{'role':'user','content':f'ÄÜ¸øÎÒ»­Ò»¸ö{old}Âğ'},{'role':'assistant','content':f'ÄÜ£¬ÎÒ¿ÉÒÔ»­{old}¡£'},{'role':'user','content':'ÄÇÄã»­°É'},{'role':'assistant','content':ink_answer(oldi)}]
   alias=target.lower() if j%2 and target.isalpha() else target
-  h.extend([{'role':'user','content':f'èƒ½å†ç»™æˆ‘ç”»ä¸€ä¸ª{"å­—æ¯" if target.isalpha() else "æ•°å­—"}{alias}å—'},{'role':'assistant','content':f'èƒ½ï¼Œæˆ‘å¯ä»¥ç”»{alias}ã€‚'}])
+  h.extend([{'role':'user','content':f'ÄÜÔÙ¸øÎÒ»­Ò»¸ö{"×ÖÄ¸" if target.isalpha() else "Êı×Ö"}{alias}Âğ'},{'role':'assistant','content':f'ÄÜ£¬ÎÒ¿ÉÒÔ»­{alias}¡£'}])
   draw_rows[i].append(make_draw(i,confirm,h))
   if j<4:
    # New target comes before the forbidden old target, too.
-   draw_rows[i].append(make_draw(i,f'æˆ‘è¦{target}ï¼Œä¸è¦å†å†™{old}ã€‚',h[:4]))
+   draw_rows[i].append(make_draw(i,f'ÎÒÒª{target}£¬²»ÒªÔÙĞ´{old}¡£',h[:4]))
  # An unqualified typed lowercase letter refers to its trained capital form;
  # explicit requests for lowercase remain capability clarification examples.
  if target.isalpha():
-  draw_rows[i].append(make_draw(i,f'å¸®æˆ‘å†™å­—æ¯{target.lower()}ã€‚',[]))
+  draw_rows[i].append(make_draw(i,f'°ïÎÒĞ´×ÖÄ¸{target.lower()}¡£',[]))
 for c in range(36):
  target=CHARS[c];old=CHARS[(c+7)%36];h=make_history([(c+7)%36])
- h.extend([{'role':'user','content':f'ä½ èƒ½å†™{target}å—ï¼Ÿ'},{'role':'assistant','content':f'å¯ä»¥ï¼Œæˆ‘èƒ½å†™{target}ã€‚'}])
- for q,a in [('å…ˆä¸ç”»äº†ï¼Œæˆ‘åªæ˜¯é—®é—®ã€‚','å¥½çš„ï¼Œå…ˆä¸ç”»ã€‚'),('åˆ«å¼€å§‹ï¼Œå…ˆå‘Šè¯‰æˆ‘ä½ å‡†å¤‡å†™å“ªä¸ªã€‚',f'æˆ‘å‡†å¤‡å†™{target}ã€‚'),('æˆ‘ç°åœ¨è®©ä½ ç”»äº†å—ï¼Ÿ','è¿˜æ²¡æœ‰ï¼Œä½ åˆšæ‰åªæ˜¯è¯¢é—®æˆ‘èƒ½ä¸èƒ½å†™ã€‚')]:chat_rows.append(textrow(q,a,h))
+ h.extend([{'role':'user','content':f'ÄãÄÜĞ´{target}Âğ£¿'},{'role':'assistant','content':f'¿ÉÒÔ£¬ÎÒÄÜĞ´{target}¡£'}])
+ for q,a in [('ÏÈ²»»­ÁË£¬ÎÒÖ»ÊÇÎÊÎÊ¡£','ºÃµÄ£¬ÏÈ²»»­¡£'),('±ğ¿ªÊ¼£¬ÏÈ¸æËßÎÒÄã×¼±¸Ğ´ÄÄ¸ö¡£',f'ÎÒ×¼±¸Ğ´{target}¡£'),('ÎÒÏÖÔÚÈÃÄã»­ÁËÂğ£¿','»¹Ã»ÓĞ£¬Äã¸Õ²ÅÖ»ÊÇÑ¯ÎÊÎÒÄÜ²»ÄÜĞ´¡£')]:chat_rows.append(textrow(q,a,h))
 
 (OUT/'training_data.json').write_text(json.dumps({'chat':chat,'draw_templates':templates,'train_indices':tr,'valid_indices':va,'system':SYSTEM},ensure_ascii=False,indent=2))
 def batch(rows):
@@ -110,8 +110,8 @@ m=Qwen3_5ForConditionalGeneration.from_pretrained(SRC,dtype=torch.bfloat16,attn_
 named=list(m.named_parameters());params=[p for _,p in named]
 masters=[torch.nn.Parameter(p.detach().float().clone()) for p in params]
 opt=torch.optim.AdamW(masters,lr=2e-6,weight_decay=.01)
-probes_chat=['ä½ å¥½å‘€ï¼Œä»Šå¤©æ€ä¹ˆæ ·ï¼Ÿ','è¯·åªç”¨æ–‡å­—å‘Šè¯‰æˆ‘5åŠ 3çš„ç»“æœã€‚','ä¸è¦ç”»å›¾ï¼Œè§£é‡Šä¸€ä¸‹å­—æ¯Aã€‚','è°¢è°¢ä½ çš„å¸®åŠ©ï¼','å’Œæˆ‘èŠèŠç†ŠçŒ«å§ã€‚','å…ˆåˆ«ç”»å›¾ï¼Œæˆ‘ä»¬èŠèŠä»Šå¤©çš„å¿ƒæƒ…ã€‚']
-probes_draw=['è¯·æ›¿æˆ‘æ‰‹å†™æ•°å­—3ã€‚','éº»çƒ¦å†™ä¸€ä¸‹æ•°å­—5ã€‚','æˆ‘æƒ³çœ‹å¤§å†™Açš„æ‰‹å†™æ ·å­ï¼Œè¯·å†™å‡ºæ¥ã€‚','è¯·å†™å‡ºå­—æ¯Zç»™æˆ‘çœ‹ã€‚']
+probes_chat=['ÄãºÃÑ½£¬½ñÌìÔõÃ´Ñù£¿','ÇëÖ»ÓÃÎÄ×Ö¸æËßÎÒ5¼Ó3µÄ½á¹û¡£','²»Òª»­Í¼£¬½âÊÍÒ»ÏÂ×ÖÄ¸A¡£','Ğ»Ğ»ÄãµÄ°ïÖú£¡','ºÍÎÒÁÄÁÄĞÜÃ¨°É¡£','ÏÈ±ğ»­Í¼£¬ÎÒÃÇÁÄÁÄ½ñÌìµÄĞÄÇé¡£']
+probes_draw=['ÇëÌæÎÒÊÖĞ´Êı×Ö3¡£','Âé·³Ğ´Ò»ÏÂÊı×Ö5¡£','ÎÒÏë¿´´óĞ´AµÄÊÖĞ´Ñù×Ó£¬ÇëĞ´³öÀ´¡£','ÇëĞ´³ö×ÖÄ¸Z¸øÎÒ¿´¡£']
 @torch.no_grad()
 def probe(q,h=None):
  p=prefix(q,h);x=torch.tensor([p],device='cuda');generated=[]
@@ -131,16 +131,16 @@ def evaluate():
  draw_ok=sum(samples[q]['draw'] for q in probes_draw)
  multi=[]
  for old,new in [('3','A'),('5','Z'),('A','7'),('B','K'),('8','D'),('X','2')]:
-  h=make_history([CHARS.index(old)]);r=probe(f'æ¢ä¸€ä¸ªï¼Œè¯·å†™{new}ã€‚',h)
+  h=make_history([CHARS.index(old)]);r=probe(f'»»Ò»¸ö£¬ÇëĞ´{new}¡£',h)
   import re
   mentioned=re.findall(r'[A-Z0-9]',r['text'].split('<DRAW>')[0])
   multi.append({'old':old,'expected':new,**r,'target_ok':r['draw'] and bool(mentioned) and mentioned[-1]==new})
- stops=[probe('åœæ­¢ç”»å›¾ï¼Œåªå›ç­”ï¼šåˆšæ‰å†™äº†ä»€ä¹ˆï¼Ÿ',make_history([CHARS.index(c)])) for c in '35AB']
+ stops=[probe('Í£Ö¹»­Í¼£¬Ö»»Ø´ğ£º¸Õ²ÅĞ´ÁËÊ²Ã´£¿',make_history([CHARS.index(c)])) for c in '35AB']
  confirm_checks=[]
  for old,new in [('4','W'),('3','B'),('A','7'),('5','K'),('9','M'),('Z','2')]:
   oldi=byclass[CHARS.index(old)][0]
-  h=[{'role':'user','content':f'èƒ½ç”»{old}å—ï¼Ÿ'},{'role':'assistant','content':f'èƒ½ï¼Œæˆ‘å¯ä»¥ç”»{old}ã€‚'},{'role':'user','content':'é‚£ä½ ç”»å§'},{'role':'assistant','content':ink_answer(oldi)},{'role':'user','content':f'èƒ½å†ç»™æˆ‘ç”»{new.lower()}å—'},{'role':'assistant','content':f'å¯ä»¥ç”»{new.lower()}ã€‚'}]
-  r=probe('é‚£ä½ ç”»å§',h);mentioned=re.findall(r'[A-Z0-9]',r['text'].split('<DRAW>')[0]);confirm_checks.append({'old':old,'target':new,**r,'ok':r['draw'] and bool(mentioned) and mentioned[-1]==new})
+  h=[{'role':'user','content':f'ÄÜ»­{old}Âğ£¿'},{'role':'assistant','content':f'ÄÜ£¬ÎÒ¿ÉÒÔ»­{old}¡£'},{'role':'user','content':'ÄÇÄã»­°É'},{'role':'assistant','content':ink_answer(oldi)},{'role':'user','content':f'ÄÜÔÙ¸øÎÒ»­{new.lower()}Âğ'},{'role':'assistant','content':f'¿ÉÒÔ»­{new.lower()}¡£'}]
+  r=probe('ÄÇÄã»­°É',h);mentioned=re.findall(r'[A-Z0-9]',r['text'].split('<DRAW>')[0]);confirm_checks.append({'old':old,'target':new,**r,'ok':r['draw'] and bool(mentioned) and mentioned[-1]==new})
  return {'confirmation_checks':confirm_checks,'confirmation_ok':sum(r['ok'] for r in confirm_checks),'code_accuracy':right/tot,'chat_plain':chat_ok,'chat_total':len(probes_chat),'draw_mode':draw_ok,'draw_total':len(probes_draw),'samples':samples,'multi':multi,'multi_target_ok':sum(r['target_ok'] for r in multi),'stop_ok':sum(not r['draw'] and not r['stray_code'] and r['eos'] for r in stops),'stops':stops}
 meta={'source':str(SRC),'epochs':3,'batch_draw':2,'batch_chat':2,'lr':2e-6,'seed':1610,'master_dtype':'fp32','compute_dtype':'bf16','chat_rows':len(chat_rows),'draw_train':len(tr),'draw_valid':len(va),'selection':'maximize chat/draw probe success, then validation code accuracy; probes are development checks, not independent final test'}
 (OUT/'experiment.json').write_text(json.dumps(meta,indent=2));print(json.dumps(meta),flush=True)

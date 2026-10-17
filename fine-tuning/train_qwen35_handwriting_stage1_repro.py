@@ -1,4 +1,4 @@
-﻿import json,random,time
+import json,random,time
 import sys
 from pathlib import Path
 import numpy as np, torch
@@ -7,7 +7,7 @@ import sys
 PROJECT=Path(__file__).resolve().parent
 sys.path.insert(0,str(PROJECT))
 from aligned_digit_data import load,BASE
-SRC=PROJECT/'models'/'qwen3.5-0.8b'; OUT=PROJECT/'runs'/'qwen_stage1_oldmethod_restart'; OUT.mkdir(exist_ok=True)
+SRC=PROJECT/'models'/'qwen3.5-0.8b'; OUT=PROJECT/'runs'/'qwen_stage1_oldmethod_restart'; OUT.mkdir(parents=True,exist_ok=True)
 CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'; SYSTEM='You generate handwriting codes. Output exactly 16 code tokens.'
 random.seed(42);np.random.seed(42);torch.manual_seed(42);torch.set_num_threads(4); dev='cuda'
 xy,lab,held=load(); lab=np.asarray(lab)
