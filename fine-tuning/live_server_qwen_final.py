@@ -31,7 +31,7 @@ retrain_vq.load_state_dict(torch.load(RETRAIN_DIR/'data'/'aligned_vq_smooth.pt',
 retrain_struct = StructuredStrokeDecoder().to(DEVICE).eval()
 retrain_struct.load_state_dict(torch.load(RETRAIN_DIR/'structured_decoder.pt', map_location=DEVICE, weights_only=False)['model'])
 torch.seed()
-Q_DIR = Path('/root/autodl-tmp/qwen_confirmation_newfp32_20261017/best')
+Q_DIR = Path(__file__).resolve().parent/'runs'/'qwen_confirmation'/'best'
 q_tok = AutoTokenizer.from_pretrained(Q_DIR)
 q_model = Qwen3_5ForConditionalGeneration.from_pretrained(
     Q_DIR, dtype=torch.bfloat16, attn_implementation='eager'
@@ -272,9 +272,9 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == '/transformer-strokes':
             body = STROKE_PAGE.encode('utf-8')
         elif self.path == '/compare':
-            body = Path('/root/autodl-tmp/digit_more_data/残差分词器对比.html').read_bytes()
+            body = DATA_DIR/'残差分词器对比.html'.read_bytes()
         elif self.path == '/generate-compare':
-            body = Path('/root/autodl-tmp/digit_more_data/生成效果对比.html').read_bytes()
+            body = DATA_DIR/'生成效果对比.html'.read_bytes()
         elif self.path in ('/', '/index.html'):
             body = (DATA_DIR/'qwen_chat_page.html').read_bytes()
         elif self.path == '/transformer-small':
@@ -386,6 +386,8 @@ if __name__ == '__main__':
     server = ThreadingHTTPServer(('0.0.0.0', int(os.getenv('PORT', '6006'))), Handler)
     print('ready http://127.0.0.1:6006', flush=True)
     server.serve_forever()
+
+
 
 
 

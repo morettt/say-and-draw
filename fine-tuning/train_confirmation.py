@@ -1,10 +1,10 @@
-"""Mixed text/drawing continuation of the best digit+A-Z checkpoint."""
+﻿"""Mixed text/drawing continuation of the best digit+A-Z checkpoint."""
 import json,random,time,sys,gc
 from pathlib import Path
 import numpy as np,torch
 from transformers import AutoTokenizer,Qwen3_5ForConditionalGeneration
-ROOT=Path('/root/autodl-tmp');SRC=ROOT/'qwen_multiturn_20261016/best';OUT=ROOT/'qwen_confirmation_20261016'
-OUT.mkdir(exist_ok=False);sys.path.insert(0,str(ROOT/'retrain_codex_20261015'))
+ROOT=Path(__file__).resolve().parent;SRC=ROOT/'runs'/'qwen_multiturn'/'best';OUT=ROOT/'runs'/'qwen_confirmation'
+OUT.mkdir(exist_ok=False);sys.path.insert(0,str(ROOT))
 from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ
 SYSTEM='You are a helpful assistant. Reply normally. For drawing, say a short sentence and then emit <DRAW>, 16 motion codes, <END_DRAW>. Do not emit <CHAT>.'
@@ -13,7 +13,7 @@ torch.set_num_threads(4);torch.manual_seed(1610);rng=random.Random(1610)
 xy,lab,_=load();split=random.Random(42);tr=[];va=[]
 for c in range(36):
  ix=np.flatnonzero(lab==c).tolist();split.shuffle(ix);n=max(1,round(len(ix)*.15));va+=ix[:n];tr+=ix[n:]
-v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(ROOT/'retrain_codex_20261015/aligned_vq_smooth.pt',weights_only=False)['model'])
+v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(ROOT/'data'/'aligned_vq_smooth.pt',weights_only=False)['model'])
 with torch.no_grad():raw=v.encode(torch.tensor(xy,device='cuda'))[1].cpu().numpy()
 del v;torch.cuda.empty_cache()
 tok=AutoTokenizer.from_pretrained(SRC);draw=tok.convert_tokens_to_ids('<DRAW>');end=tok.convert_tokens_to_ids('<END_DRAW>');cid=[tok.convert_tokens_to_ids(f'<M{i:03d}>') for i in range(256)];ct=torch.tensor(cid,device='cuda')
@@ -168,3 +168,4 @@ for ep in range(1,4):
  with (OUT/'metrics.jsonl').open('a') as f:f.write(json.dumps(rec,ensure_ascii=False)+'\n')
 (OUT/'TRAIN_DONE').write_text('3 epochs completed')
 print('TRAIN_DONE',flush=True)
+

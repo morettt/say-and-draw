@@ -1,16 +1,17 @@
-import json,random,time
+﻿import json,random,time
 import sys
 from pathlib import Path
 import numpy as np, torch
 from transformers import Qwen3_5ForConditionalGeneration, AutoTokenizer
 import sys
-sys.path.insert(0,str(Path('/root/say-and-draw/fine-tuning')))
+PROJECT=Path(__file__).resolve().parent
+sys.path.insert(0,str(PROJECT))
 from aligned_digit_data import load,BASE
-SRC=Path('/root/autodl-tmp/qwen3.5-0.8b'); OUT=Path('/root/say-and-draw/fine-tuning/qwen_stage1_oldmethod'); OUT.mkdir(exist_ok=True)
+SRC=PROJECT/'models'/'qwen3.5-0.8b'; OUT=PROJECT/'runs'/'qwen_stage1_oldmethod_restart'; OUT.mkdir(exist_ok=True)
 CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'; SYSTEM='You generate handwriting codes. Output exactly 16 code tokens.'
 random.seed(42);np.random.seed(42);torch.manual_seed(42);torch.set_num_threads(4); dev='cuda'
 xy,lab,held=load(); lab=np.asarray(lab)
-codec_path=Path('/root/say-and-draw/fine-tuning/data/aligned_vq_smooth.pt')
+codec_path=PROJECT/'data'/'aligned_vq_smooth.pt'
 sys.path.insert(0,str(codec_path.parent)) if False else None
 from aligned_vq_model import AlignedVQ
 codec=AlignedVQ().to(dev).eval();codec.load_state_dict(torch.load(codec_path,map_location=dev,weights_only=False)['model'])
@@ -48,3 +49,5 @@ for ep in range(1,36):
  if score['loss']<best:
   best=score['loss'];model.save_pretrained(OUT,safe_serialization=True);tok.save_pretrained(OUT);(OUT/'training_info.json').write_text(json.dumps({'epoch':ep,'validation':score,'chars':CHARS},ensure_ascii=False))
 print(json.dumps({'stage':'finished','best_validation_loss':best,'path':str(OUT)},ensure_ascii=False),flush=True)
+
+
