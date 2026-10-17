@@ -1,3 +1,0 @@
-﻿-r requirements.txt
-transformers==5.20.0
-safetensors==0.8.0
