@@ -1,11 +1,11 @@
-"""Controlled continuation: identical BF16 compute, differing AdamW/master precision."""
+﻿"""Controlled continuation: identical BF16 compute, differing AdamW/master precision."""
 import hashlib,json,random,sys,time
 from pathlib import Path
 import numpy as np
 import torch
 from transformers import AutoTokenizer,AutoModelForCausalLM
 
-ROOT=Path('/root/say-and-draw/fine-tuning');SRC=ROOT/'qwen_stage1_exact'/'best'
+ROOT=Path(__file__).resolve().parent;SRC=ROOT/'runs'/'qwen_stage1_exact'/'best'
 RUN=ROOT/'qwen_precision_ablation';arm=sys.argv[1]
 assert arm in ('bf16','fp32_master')
 OUT=RUN/arm;OUT.mkdir(parents=True,exist_ok=False)
@@ -80,3 +80,4 @@ for ep,rows in enumerate(schedule,1):
 m.save_pretrained(OUT,safe_serialization=True);tok.save_pretrained(OUT)
 if arm=='fp32_master':torch.save({n:q.detach().cpu() for (n,_),q in zip(named,masters)},OUT/'fp32_master_weights.pt')
 (OUT/'TRAIN_DONE').write_text('completed all 10 epochs\n');print('TRAIN_DONE',flush=True)
+
