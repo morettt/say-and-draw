@@ -1,5 +1,4 @@
-# �Ȱ�װ���Լ� CUDA ��Ӧ�� PyTorch��
-# ��ʵ���¼ʹ�� CUDA 12.4 ��Ӧ�� PyTorch 2.6.0��
+
 --index-url https://download.pytorch.org/whl/cu124
 --extra-index-url https://pypi.org/simple
 torch==2.6.0
