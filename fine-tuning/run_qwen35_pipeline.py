@@ -26,36 +26,43 @@ ROOT = Path(__file__).resolve().parent
 STATE_PATH = ROOT / "qwen35_pipeline_state.json"
 MODEL_ID = "Qwen/Qwen3.5-0.8B"
 MODEL_DIR = ROOT / "qwen3.5-0.8b"
+EVAL_SCRIPT = ROOT / "evaluate_dialogue_regression.py"
+EVAL_DIR = ROOT / "eval" / "dialogue_runs"
 
 STAGES = {
     1: {
         "name": "Qwen3.5 handwriting stage 1",
         "script": "train_qwen35_handwriting_stage1_repro.py",
         "args": [],
+        "model": ROOT / "runs" / "qwen_stage1_oldmethod_restart",
         "outputs": [ROOT / "runs" / "qwen_stage1_oldmethod_restart" / "training_info.json"],
     },
     2: {
         "name": "FP32 master continuation",
         "script": "train_precision_ablation_oldmethod.py",
         "args": ["fp32_master"],
+        "model": ROOT / "runs" / "qwen_precision_oldmethod" / "fp32_master",
         "outputs": [ROOT / "runs" / "qwen_precision_oldmethod" / "fp32_master" / "TRAIN_DONE"],
     },
     3: {
         "name": "Chat and handwriting mixed training",
         "script": "train_chat_letters.py",
         "args": [],
+        "model": ROOT / "runs" / "qwen_chat_letters" / "best",
         "outputs": [ROOT / "runs" / "qwen_chat_letters" / "TRAIN_DONE"],
     },
     4: {
         "name": "Multi-turn training",
         "script": "train_multiturn.py",
         "args": [],
+        "model": ROOT / "runs" / "qwen_multiturn" / "best",
         "outputs": [ROOT / "runs" / "qwen_multiturn" / "TRAIN_DONE"],
     },
     5: {
         "name": "Confirmation-dialog training",
         "script": "train_confirmation.py",
         "args": [],
+        "model": ROOT / "runs" / "qwen_confirmation" / "best",
         "outputs": [ROOT / "runs" / "qwen_confirmation" / "TRAIN_DONE"],
     },
 }
@@ -74,6 +81,11 @@ def parse_args() -> argparse.Namespace:
         "--dry-run",
         action="store_true",
         help="print the commands without starting training",
+    )
+    parser.add_argument(
+        "--skip-dialogue-eval",
+        action="store_true",
+        help="do not call the independent dialogue evaluator after stages",
     )
     return parser.parse_args()
 
@@ -145,7 +157,9 @@ def ensure_qwen_model(dry_run: bool) -> None:
     print(f"Qwen3.5 基础模型下载完成：{MODEL_DIR}", flush=True)
 
 
-def check_environment(dry_run: bool) -> None:
+def check_environment(dry_run: bool, require_dialogue_eval: bool) -> None:
+    if not dry_run and require_dialogue_eval and not os.getenv("ALI_QWEN_API_KEY"):
+        raise SystemExit("缺少 ALI_QWEN_API_KEY；如需跳过评估可加 --skip-dialogue-eval。")
     ensure_qwen_model(dry_run)
     if dry_run:
         return
@@ -171,6 +185,33 @@ def check_environment(dry_run: bool) -> None:
         raise SystemExit(
             "Qwen3.5 训练脚本目前要求 CUDA。请在有 NVIDIA GPU 的环境运行。"
         )
+
+
+def run_dialogue_eval(label: str, candidate: Path, dry_run: bool) -> None:
+    if not EVAL_SCRIPT.is_file():
+        raise SystemExit(f"缺少对话评估脚本：{EVAL_SCRIPT.name}")
+    output = EVAL_DIR / f"{label}.json"
+    command = [
+        sys.executable,
+        "-u",
+        EVAL_SCRIPT.name,
+        "--baseline",
+        str(MODEL_DIR),
+        "--candidate",
+        str(candidate),
+        "--label",
+        label,
+        "--output",
+        str(output),
+    ]
+    print("对话回归评估：$ " + " ".join(command), flush=True)
+    if dry_run:
+        return
+    if not os.getenv("ALI_QWEN_API_KEY"):
+        raise SystemExit("缺少 ALI_QWEN_API_KEY，无法执行阿里独立对话评估。")
+    result = subprocess.run(command, cwd=ROOT, env=os.environ.copy())
+    if result.returncode != 0:
+        raise SystemExit(f"{label} 对话回归评估失败，已停止。")
 
 
 def validate_previous_stages(number: int) -> None:
@@ -243,10 +284,12 @@ def run_stage(number: int, state: dict, dry_run: bool) -> None:
 
 def main() -> None:
     args = parse_args()
-    check_environment(args.dry_run)
+    check_environment(args.dry_run, not args.skip_dialogue_eval)
     state = load_state()
     for number in range(args.from_stage, 6):
         run_stage(number, state, args.dry_run)
+        if not args.skip_dialogue_eval:
+            run_dialogue_eval(f"stage{number}", STAGES[number]["model"], args.dry_run)
     if not args.dry_run:
         print("\nQwen3.5 五个训练阶段全部完成。", flush=True)
 
