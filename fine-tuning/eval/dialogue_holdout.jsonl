@@ -1,20 +1,20 @@
-{"id":"chat_001","messages":[{"role":"user","content":"我今天有点累，给我一句不鸡汤的安慰。"}]}
-{"id":"chat_002","messages":[{"role":"user","content":"如果你不知道答案，应该怎么回答？"}]}
-{"id":"chat_003","messages":[{"role":"user","content":"把“这个方案先不做”改成委婉的工作消息。"}]}
-{"id":"chat_004","messages":[{"role":"user","content":"用三句话解释为什么下雨前空气会变闷。"}]}
-{"id":"chat_005","messages":[{"role":"user","content":"比较番茄和土豆，一个相同点、一个不同点。"}]}
-{"id":"chat_006","messages":[{"role":"user","content":"只给结论：7×8 等于多少？"}]}
-{"id":"chat_007","messages":[{"role":"user","content":"把“检查电源、按开机键”按正确顺序排列。"}]}
-{"id":"chat_008","messages":[{"role":"user","content":"“银行”和“河岸”里的“岸”意思一样吗？"}]}
-{"id":"chat_009","messages":[{"role":"user","content":"指出这句话的歧义：“他告诉小王他明天会来。”"}]}
-{"id":"chat_010","messages":[{"role":"user","content":"给我一个不超过三步的周末整理书桌计划。"}]}
-{"id":"chat_011","messages":[{"role":"user","content":"只用文字回答：你能做什么？不要输出特殊标记。"}]}
-{"id":"chat_012","messages":[{"role":"user","content":"信息不足时，你应该先问什么？"}]}
-{"id":"chat_013","messages":[{"role":"user","content":"只听到“他已经到了”，你会追问什么？"}]}
-{"id":"chat_014","messages":[{"role":"user","content":"用 20 字以内解释什么是过拟合。"}]}
-{"id":"chat_015","messages":[{"role":"user","content":"用户同时提出两个冲突要求时，你怎么处理？"}]}
-{"id":"chat_016","messages":[{"role":"user","content":"我准备明天出门。"},{"role":"assistant","content":"好的，记住了。"},{"role":"user","content":"改成下周末出门，你还记得我刚才说的时间吗？"}]}
-{"id":"chat_017","messages":[{"role":"user","content":"我喜欢清淡口味。"},{"role":"assistant","content":"好的，我会记住。"},{"role":"user","content":"推荐一个不辣的晚餐。"}]}
-{"id":"chat_018","messages":[{"role":"user","content":"把“这个决定需要再讨论”改短一点。"},{"role":"assistant","content":"这个决定还需讨论。"},{"role":"user","content":"再正式一点。"}]}
-{"id":"chat_019","messages":[{"role":"user","content":"我每天只有二十分钟学习时间，请给我一个安排。"},{"role":"assistant","content":"可以分成两个十分钟：学习一个小知识点，再做几道练习。"},{"role":"user","content":"今天只有五分钟，缩短成今天能完成的版本。"}]}
-{"id":"chat_020","messages":[{"role":"user","content":"我在写一封工作邮件。"},{"role":"assistant","content":"好的，我可以帮你修改。"},{"role":"user","content":"只改结尾，前面的内容不要动。"}]}
+{"id":"chat_001","messages":[{"role":"user","content":"今天脑子像被棉花塞住了，请用一句平实的话回应。"}]}
+{"id":"chat_002","messages":[{"role":"user","content":"回答不知道时，最重要的原则是什么？"}]}
+{"id":"chat_003","messages":[{"role":"user","content":"把“这个提案先放一放”改成给同事的礼貌短句。"}]}
+{"id":"chat_004","messages":[{"role":"user","content":"为什么玻璃窗上会出现水汽？限两句话。"}]}
+{"id":"chat_005","messages":[{"role":"user","content":"说出茶和咖啡一个共同点与一个差异。"}]}
+{"id":"chat_006","messages":[{"role":"user","content":"只写数字：9×6 等于多少？"}]}
+{"id":"chat_007","messages":[{"role":"user","content":"“先关火、再端锅”的正确顺序是什么？"}]}
+{"id":"chat_008","messages":[{"role":"user","content":"“开会”和“开门”的“开”含义相同吗？"}]}
+{"id":"chat_009","messages":[{"role":"user","content":"指出“我看见他拿着望远镜”可能的两种理解。"}]}
+{"id":"chat_010","messages":[{"role":"user","content":"给我一个收拾背包的三步方案，不要展开。"}]}
+{"id":"chat_011","messages":[{"role":"user","content":"只用自然语言介绍你能提供的帮助，禁止控制标签。"}]}
+{"id":"chat_012","messages":[{"role":"user","content":"遇到缺少地点信息的天气问题，先追问哪一项？"}]}
+{"id":"chat_013","messages":[{"role":"user","content":"听到“文件已经发出去了”，你要确认什么？"}]}
+{"id":"chat_014","messages":[{"role":"user","content":"用不超过 20 个字解释数据泄漏。"}]}
+{"id":"chat_015","messages":[{"role":"user","content":"用户要求既简短又完整，冲突时怎么处理？"}]}
+{"id":"chat_016","messages":[{"role":"user","content":"我原计划周三去办事。"},{"role":"assistant","content":"好的，我记住了。"},{"role":"user","content":"现在改成周五，你应该以哪个日期为准？"}]}
+{"id":"chat_017","messages":[{"role":"user","content":"我不吃坚果。"},{"role":"assistant","content":"好的，我会避开坚果。"},{"role":"user","content":"给我一个下午茶建议。"}]}
+{"id":"chat_018","messages":[{"role":"user","content":"把“这件事需要再看看”压缩成四个字。"},{"role":"assistant","content":"此事待定。"},{"role":"user","content":"换成适合正式报告的表达。"}]}
+{"id":"chat_019","messages":[{"role":"user","content":"我想每天练习十分钟口语。"},{"role":"assistant","content":"可以每天安排一小段跟读和复述。"},{"role":"user","content":"今天只能练两分钟，怎么调整？"}]}
+{"id":"chat_020","messages":[{"role":"user","content":"我在修改一份通知。"},{"role":"assistant","content":"好的，我可以帮你检查措辞。"},{"role":"user","content":"只检查标题，正文不要动。"}]}

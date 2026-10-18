@@ -7,6 +7,7 @@ ROOT=Path(__file__).resolve().parent;SRC=ROOT/'runs'/'qwen_multiturn'/'best';OUT
 OUT.mkdir(parents=True,exist_ok=False);sys.path.insert(0,str(ROOT))
 from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ
+from qwen_chat_data import load_rows
 SYSTEM='You are a helpful assistant. Reply normally. For drawing, say a short sentence and then emit <DRAW>, 16 motion codes, <END_DRAW>. Do not emit <CHAT>.'
 CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'
 torch.set_num_threads(4);torch.manual_seed(1610);rng=random.Random(1610)
@@ -24,19 +25,9 @@ templates=['请帮我写一个{kind}{c}。','画一个{kind}{c}给我看看。',
 def drawrow(i,t=0):
  c=CHARS[lab[i]];q=templates[t].format(c=c,kind='数字' if c.isdigit() else '字母');intro=f'好的，我给你写一个{c}。\n' if t<7 else f'Sure, here is {c}.\n';p=prefix(q);a=tok.encode(intro,add_special_tokens=False)+[draw];start=len(p)+len(a)
  return p+a+[cid[int(z)] for z in raw[i]]+[end,tok.eos_token_id],len(p),start
-chat=[('你好','你好！有什么想聊的？'),('你好啊','你好！很高兴和你聊天。'),('您好','您好！我可以帮您做什么？'),('谢谢','不客气！'),('再见','再见，祝你今天愉快！'),('早上好','早上好！祝你有美好的一天。'),('你是谁','我是一个可以回答问题、聊天和生成手写数字与大写英文字母的助手。'),('你能做什么','我可以和你聊天、回答问题，也可以按要求写数字和大写英文字母。'),('我们聊聊天吧','好呀，你想聊什么？'),('不要画图，陪我聊聊','好的，我们只聊天。你今天过得怎么样？'),('我今天有点难过','听起来你今天不太开心。愿意说说发生了什么吗？'),('我有点累','辛苦了，先休息一会儿、喝点水吧。'),('讲一个笑话','为什么电脑总是很冷？因为它开了太多窗口。'),('介绍一下熊猫','大熊猫是中国的珍稀哺乳动物，主要以竹子为食。'),('天空为什么是蓝色的','阳光经过大气时，蓝光比红光更容易被散射，因此天空通常看起来是蓝色的。'),('水在几摄氏度结冰','在标准大气压下，纯水通常在零摄氏度结冰。'),('中国的首都是哪里','中国的首都是北京。'),('一年有几个月','一年有十二个月。'),('一周有几天','一周有七天。'),('帮我安排学习时间','可以先学习二十五分钟，再休息五分钟，按任务难度调整。'),('为什么需要睡觉','睡眠帮助身体恢复，也有助于记忆和注意力。'),('今天的天气怎么样','我没有实时天气信息。你可以告诉我所在城市，或查看当地天气预报。'),('你能画猫吗','目前我主要支持手写数字和大写英文字母，还不能可靠地画猫。'),('请画一只猫','目前我还不能可靠地画猫，可以帮你写一个数字或大写英文字母。'),('你能写中文吗','目前手写部分主要支持数字和大写英文字母，中文可以用文字回复。'),('Hello','Hello! How can I help you?'),('How are you?','I am ready to help. How are you?'),('Do not draw. Just say hello.','Hello!'),('What can you do?','I can chat, answer questions, and draw handwritten digits and uppercase letters.')]
-for c in CHARS:
- kind='数字' if c.isdigit() else '大写英文字母'
- chat.extend([(f'{c}是什么？',f'{c}是一个{kind}。'),(f'不要画，告诉我{c}是什么。',f'{c}是一个{kind}。'),(f'你会写{c}吗？',f'会，我可以按要求写出{c}。'),(f'只用文字回答，你能画{c}吗？',f'能，我可以画{c}。'),(f'我提到了{c}，但不需要你画出来。','好的，我只回复文字。'),(f'Tell me what {c} is. Do not draw.',f'{c} is a '+('digit.' if c.isdigit() else 'capital letter.'))])
-for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
- chat.extend([(f'字母{c}的小写是什么？',f'字母{c}的小写是{c.lower()}。'),(f'不要画，{c}是第几个字母？',f'{c}是英文字母表中的第{ord(c)-64}个字母。')])
-for a in range(10):
- for b in [1,3,5]:chat.append((f'{a}+{b}等于多少？',f'{a}加{b}等于{a+b}。'))
-chat=[(q,a) for q,a in chat if any(ord(z)>127 for z in q)]
-chat_rows=[textrow(q,a) for q,a in chat]
-# Short multi-turn examples teach the same interface used by the deployed chat page.
-for c in CHARS:
- chat_rows.append(textrow('先别画，告诉我你准备写什么。',f'我准备写{c}。',[{'role':'user','content':f'我想写{c}。'},{'role':'assistant','content':f'你想让我帮你写{c}吗？'}]))
+CHAT_FILE=ROOT/'data'/'qwen'/'chat_stage5.jsonl'
+chat,chat_raw=load_rows(CHAT_FILE)
+chat_rows=[textrow(q,a,h) for q,a,h in chat]
 draw_rows={i:[drawrow(i,t) for t in range(len(templates))] for i in tr+va}
 # Inserted into the training script after single-turn rows have been constructed.
 byclass={c:[i for i in tr if lab[i]==c] for c in range(36)}
@@ -63,22 +54,6 @@ for i in tr:
   old=CHARS[previous]
   draw_rows[i].append(make_draw(i,f'不要写{old}了，我现在要{c}。',make_history(sequence)))
  draw_rows[i].append(make_draw(i,'再写一遍刚才的那个。',make_history([lab[i]])))
-for c in range(36):
- char=CHARS[c];h=make_history([c])
- for q,a in [('好了，停下，不要再画了。','好的，我停止画图。'),('现在只聊天。你好！','你好！我们接下来只聊天。'),('不要再画，告诉我刚才写的是什么。',f'刚才写的是{char}。'),('我没让你继续写。','明白，我会等你提出新的要求。'),('不画了，告诉我2加3的答案。','2加3等于5。'),('不要画，字母A的小写是什么？','字母A的小写是a。'),('下一步先别动笔，解释一下英文字母。','英文字母是用来书写英语的符号，共有二十六个。')]:
-  chat_rows.append(textrow(q,a,h))
-# Additional varied negatives, with answers addressing the actual question.
-for c in CHARS:
- for q,a in [(f'先不要画{c}，说说它是什么。',f'{c}是一个'+('数字。' if c.isdigit() else '大写英文字母。')),(f'我只问你会不会写{c}，不用写出来。',f'会，我可以写{c}。')]:chat_rows.append(textrow(q,a))
- for q in [f'暂时不画，请解释{c}。',f'这里只需要回答问题：{c}是什么？',f'我不想要笔迹，请介绍一下{c}。']:
-  chat_rows.append(textrow(q,f'{c}是一个'+('数字。' if c.isdigit() else '大写英文字母。')))
-for a in range(10):
- for b in [2,4,6]:
-  chat_rows.append(textrow(f'只用文字回答，{a}加{b}是多少？',f'{a}加{b}等于{a+b}。',make_history([hr.randrange(36)])))
-# Capability boundaries: this version supports one character per request.
-for q in ['帮我写HELLO','一次写出123','画一只猫','帮我画一栋房子','写一个汉字好']:
- chat_rows.append(textrow(q,'目前我一次能手写一个数字或大写英文字母，请指定一个字符。'))
-for c in 'abcdefghijklmnopqrstuvwxyz':chat_rows.append(textrow(f'请写一个小写{c}。',f'目前手写部分支持大写字母，可以帮你写{c.upper()}。'))
 (OUT/'multiturn_recipe.json').write_text(json.dumps({'draw_variants_per_sample':len(draw_rows[tr[0]]),'chat_rows':len(chat_rows),'history_contains_actual_codes':True,'history_source':'training split only','seed':9016},ensure_ascii=False,indent=2))
 
 for i in tr:
@@ -96,12 +71,7 @@ for i in tr:
  # explicit requests for lowercase remain capability clarification examples.
  if target.isalpha():
   draw_rows[i].append(make_draw(i,f'帮我写字母{target.lower()}。',[]))
-for c in range(36):
- target=CHARS[c];old=CHARS[(c+7)%36];h=make_history([(c+7)%36])
- h.extend([{'role':'user','content':f'你能写{target}吗？'},{'role':'assistant','content':f'可以，我能写{target}。'}])
- for q,a in [('先不画了，我只是问问。','好的，先不画。'),('别开始，先告诉我你准备写哪个。',f'我准备写{target}。'),('我现在让你画了吗？','还没有，你刚才只是询问我能不能写。')]:chat_rows.append(textrow(q,a,h))
-
-(OUT/'training_data.json').write_text(json.dumps({'chat':chat,'draw_templates':templates,'train_indices':tr,'valid_indices':va,'system':SYSTEM},ensure_ascii=False,indent=2))
+(OUT/'training_data.json').write_text(json.dumps({'chat':chat_raw,'chat_source':str(CHAT_FILE),'draw_templates':templates,'train_indices':tr,'valid_indices':va,'system':SYSTEM},ensure_ascii=False,indent=2))
 def batch(rows):
  x=torch.full((len(rows),max(len(r[0]) for r in rows)),tok.pad_token_id,device='cuda',dtype=torch.long);mask=torch.zeros_like(x);y=torch.full_like(x,-100)
  for j,(s,p,_) in enumerate(rows):x[j,:len(s)]=torch.tensor(s,device='cuda');mask[j,:len(s)]=1;y[j,p:len(s)]=x[j,p:len(s)]
