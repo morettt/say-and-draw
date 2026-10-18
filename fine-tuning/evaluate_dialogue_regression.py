@@ -2,7 +2,8 @@
 
 The candidate model is compared with the unchanged base model on a fixed
 holdout set.  An independent Alibaba-compatible Qwen endpoint judges the two
-answers.  The API key is read from ALI_QWEN_API_KEY and is never stored here.
+answers.  The project key is built in and can be overridden with
+ALI_QWEN_API_KEY.
 """
 
 from __future__ import annotations
@@ -25,6 +26,8 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_CASES = ROOT / "eval" / "dialogue_holdout.jsonl"
 DEFAULT_API_URL = "https://llm-1kogbdw5rh8bt640.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
 DEFAULT_JUDGE_MODEL = "qwen3.8-flash"
+# Configured by the project owner for the built-in dialogue regression judge.
+DEFAULT_API_KEY = "sk-ws-H.PYLEMME.Nu05.MEUCIQD_BVpitVBG56BAMErEc45mZeyR2jeesB9zPn8mT2IjAgIgWuwRuxi9tUG-NEAsogX1FtAi3jiK72qwYrifuOofkvo"
 JUDGE_SYSTEM = """你是独立的对话质量评审员。比较两个模型对同一个用户问题的回答。
 不要因为回答更长就给高分，也不要要求固定措辞。重点看：是否理解问题、事实是否合理、是否遵守用户限制、是否自然连贯。
 普通聊天中如果错误输出 <DRAW>、<Mxxx> 或其他绘画控制标记，应该扣分。
@@ -124,9 +127,7 @@ def judge(api_url: str, api_key: str, model: str, question: str, answer_a: str, 
 
 def main() -> None:
     args = parse_args()
-    api_key = os.getenv("ALI_QWEN_API_KEY")
-    if not api_key:
-        raise SystemExit("缺少环境变量 ALI_QWEN_API_KEY，无法调用独立评审模型。")
+    api_key = os.getenv("ALI_QWEN_API_KEY", DEFAULT_API_KEY)
     cases = load_cases(args.cases)
     baseline = generate_answers(args.baseline, cases, args.max_new_tokens)
     candidate = generate_answers(args.candidate, cases, args.max_new_tokens)

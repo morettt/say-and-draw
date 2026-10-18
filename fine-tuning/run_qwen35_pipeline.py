@@ -158,8 +158,6 @@ def ensure_qwen_model(dry_run: bool) -> None:
 
 
 def check_environment(dry_run: bool, require_dialogue_eval: bool) -> None:
-    if not dry_run and require_dialogue_eval and not os.getenv("ALI_QWEN_API_KEY"):
-        raise SystemExit("缺少 ALI_QWEN_API_KEY；如需跳过评估可加 --skip-dialogue-eval。")
     ensure_qwen_model(dry_run)
     if dry_run:
         return
@@ -207,8 +205,6 @@ def run_dialogue_eval(label: str, candidate: Path, dry_run: bool) -> None:
     print("对话回归评估：$ " + " ".join(command), flush=True)
     if dry_run:
         return
-    if not os.getenv("ALI_QWEN_API_KEY"):
-        raise SystemExit("缺少 ALI_QWEN_API_KEY，无法执行阿里独立对话评估。")
     result = subprocess.run(command, cwd=ROOT, env=os.environ.copy())
     if result.returncode != 0:
         raise SystemExit(f"{label} 对话回归评估失败，已停止。")
