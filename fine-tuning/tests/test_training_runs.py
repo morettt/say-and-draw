@@ -94,6 +94,15 @@ class TrainingRunTests(unittest.TestCase):
         ordinary = Path('models/qwen3.5-0.8b')
         self.assertEqual(runs.resolve_model_path(ordinary), ordinary)
 
+    def test_stage_six_uses_latest_completed_run(self):
+        output = self.completed()
+        with patch.object(pipeline, 'QWEN_GENERAL_DIR', self.stage):
+            stage = pipeline.get_stage(6)
+            self.assertEqual(stage['model'], output)
+            self.assertTrue(pipeline.outputs_exist(stage))
+        with patch.object(runs, 'QWEN_GENERAL_DIR', self.stage):
+            self.assertEqual(runs.resolve_model_path(self.stage), output)
+
     def test_broken_published_checkpoint_is_not_silently_skipped(self):
         output = self.completed()
         (output/'model.safetensors').unlink()

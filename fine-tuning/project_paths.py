@@ -32,6 +32,7 @@ QWEN_FP32_DIR = QWEN_PRECISION_DIR / "fp32_master"
 QWEN_CHAT_DIR = RUNS_DIR / "qwen_chat_letters"
 QWEN_MULTITURN_DIR = RUNS_DIR / "qwen_multiturn"
 QWEN_CONFIRMATION_DIR = RUNS_DIR / "qwen_confirmation"
+QWEN_GENERAL_DIR = RUNS_DIR / "qwen_general_chat"
 QWEN_FINAL_DIR = QWEN_CONFIRMATION_DIR / "best"
 
 

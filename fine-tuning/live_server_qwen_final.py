@@ -8,6 +8,8 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from project_paths import QWEN_GENERAL_DIR
+from training_runs import latest_training_run
 
 import numpy as np
 import torch
@@ -29,7 +31,8 @@ retrain_vq.load_state_dict(torch.load(SMOOTH_VQ, map_location=DEVICE, weights_on
 retrain_struct = StructuredStrokeDecoder().to(DEVICE).eval()
 retrain_struct.load_state_dict(torch.load(STRUCTURED_DECODER, map_location=DEVICE, weights_only=False)['model'])
 torch.seed()
-Q_DIR = QWEN_FINAL_DIR
+Q_DIR = latest_training_run(QWEN_GENERAL_DIR) if (QWEN_GENERAL_DIR / 'latest.json').is_file() else QWEN_FINAL_DIR
+print(json.dumps({'qwen_model': str(Q_DIR)}, ensure_ascii=False), flush=True)
 q_tok = AutoTokenizer.from_pretrained(Q_DIR)
 q_model = Qwen3_5ForConditionalGeneration.from_pretrained(
     Q_DIR, dtype=torch.bfloat16, attn_implementation='eager'

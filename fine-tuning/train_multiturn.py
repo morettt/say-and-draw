@@ -109,9 +109,9 @@ for ep in range(1,7):
  if ep%1==0:
   val=evaluate();rec['validation']=val;score=(val['chat_plain']+val['draw_mode']+val['multi_target_ok']+val['stop_ok'],val['code_accuracy'])
   if score>best:
-   best=score;m.save_pretrained(OUT/'best',safe_serialization=True);tok.save_pretrained(OUT/'best');(OUT/'best_meta.json').write_text(json.dumps(rec,ensure_ascii=False,indent=2))
+   best=score;m.save_pretrained(OUT/'best',safe_serialization=True);tok.save_pretrained(OUT/'best');(OUT/'best_meta.json').write_text(json.dumps(rec,ensure_ascii=False,indent=2),encoding='utf-8')
  print(json.dumps(rec,ensure_ascii=False),flush=True)
- with (OUT/'metrics.jsonl').open('a') as f:f.write(json.dumps(rec,ensure_ascii=False)+'\n')
+ with (OUT/'metrics.jsonl').open('a',encoding='utf-8') as f:f.write(json.dumps(rec,ensure_ascii=False)+'\n')
 (OUT/'TRAIN_DONE').write_text('6 epochs completed')
 print('TRAIN_DONE',flush=True)
 

@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import tempfile
 
-from project_paths import QWEN_STAGE1_DIR
+from project_paths import QWEN_STAGE1_DIR, QWEN_GENERAL_DIR
 from qwen_model_setup import missing_model_files
 
 
@@ -74,6 +74,6 @@ def latest_training_run(stage_dir: Path) -> Path:
 
 def resolve_model_path(model_dir: Path) -> Path:
     model_dir = Path(model_dir)
-    if model_dir.resolve() == QWEN_STAGE1_DIR.resolve() or (model_dir / "latest.json").is_file():
+    if model_dir.resolve() in (QWEN_STAGE1_DIR.resolve(), QWEN_GENERAL_DIR.resolve()) or (model_dir / "latest.json").is_file():
         return latest_training_run(model_dir)
     return model_dir

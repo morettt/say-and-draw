@@ -1,4 +1,4 @@
-"""Run the complete five-stage Qwen3.5 handwriting/chat training pipeline.
+"""Run the complete six-stage Qwen3.5 handwriting/chat training pipeline.
 
 Usage:
     python run_qwen35_pipeline.py
@@ -23,6 +23,8 @@ from pathlib import Path
 
 from qwen_model_setup import ensure_qwen_model as prepare_qwen_model
 from training_runs import latest_training_run
+from project_paths import QWEN_GENERAL_DIR
+from data_tools.general_chat import DEFAULT_DATA
 from data_tools.qwen import ensure_handwriting_data
 
 
@@ -68,6 +70,13 @@ STAGES = {
         "model": QWEN_CONFIRMATION_DIR / "best",
         "outputs": [QWEN_CONFIRMATION_DIR / "TRAIN_DONE"],
     },
+    6: {
+        "name": "General single/multi-turn dialogue training",
+        "script": "train_general_chat.py",
+        "args": [],
+        "model": QWEN_GENERAL_DIR,
+        "outputs": [QWEN_GENERAL_DIR / "TRAIN_DONE"],
+    },
 }
 
 
@@ -76,9 +85,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--from-stage",
         type=int,
-        choices=range(1, 6),
+        choices=range(1, 7),
         default=1,
-        help="start at this stage (1-5); earlier stages must already be complete",
+        help="start at this stage (1-6); earlier stages must already be complete",
     )
     parser.add_argument(
         "--dry-run",
@@ -122,7 +131,7 @@ def check_environment(dry_run: bool, require_dialogue_eval: bool) -> None:
         return
 
     ensure_handwriting_data()
-    required = [QWEN_HANDWRITING, QWEN_DRAWING]
+    required = [QWEN_HANDWRITING, QWEN_DRAWING, DEFAULT_DATA]
     missing = [str(path.relative_to(ROOT)) for path in required if not path.exists()]
     if missing:
         raise SystemExit(
@@ -167,6 +176,10 @@ def run_dialogue_eval(label: str, model: Path, dry_run: bool) -> None:
 
 def get_stage(number: int) -> dict:
     stage = dict(STAGES[number])
+    if number == 6 and (QWEN_GENERAL_DIR / 'latest.json').is_file():
+        model_dir = latest_training_run(QWEN_GENERAL_DIR)
+        stage['model'] = model_dir
+        stage['outputs'] = [model_dir / 'TRAIN_DONE']
     if number == 1:
         try:
             model_dir = latest_training_run(QWEN_STAGE1_DIR)
@@ -201,7 +214,7 @@ def run_stage(number: int, state: dict, dry_run: bool) -> None:
         validate_previous_stages(number)
 
     command = [sys.executable, "-u", script.name, *stage["args"]]
-    print(f"\n=== 阶段 {number}/5：{stage['name']} ===", flush=True)
+    print(f"\n=== 阶段 {number}/6：{stage['name']} ===", flush=True)
     print("$ " + " ".join(command), flush=True)
 
     if outputs_exist(stage):
@@ -217,7 +230,7 @@ def run_stage(number: int, state: dict, dry_run: bool) -> None:
     # run left an incomplete directory, stop with a clear message instead of
     # deleting training artifacts automatically.
     output_dirs = {path.parent for path in stage["outputs"]}
-    blocked = [str(path.relative_to(ROOT)) for path in output_dirs if path.exists() and not outputs_exist(stage)] if number >= 2 else []
+    blocked = [str(path.relative_to(ROOT)) for path in output_dirs if path.exists() and not outputs_exist(stage)] if 2 <= number <= 5 else []
     if blocked and number >= 2:
         raise SystemExit(
             "发现未完成的阶段目录，原训练脚本不会覆盖它们：\n  - "
@@ -256,12 +269,12 @@ def main() -> None:
     args = parse_args()
     check_environment(args.dry_run, not args.skip_dialogue_eval)
     state = load_state()
-    for number in range(args.from_stage, 6):
+    for number in range(args.from_stage, 7):
         run_stage(number, state, args.dry_run)
         if not args.skip_dialogue_eval:
             run_dialogue_eval(f"stage{number}", get_stage(number)["model"], args.dry_run)
     if not args.dry_run:
-        print("\nQwen3.5 五个训练阶段全部完成。", flush=True)
+        print("\nQwen3.5 六个训练阶段全部完成。", flush=True)
 
 
 if __name__ == "__main__":
