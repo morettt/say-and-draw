@@ -187,15 +187,10 @@ def main() -> None:
     if len(answers) != len(cases):
         raise ValueError("模型回答数量与评估用例数量不一致")
     rows = []
-    print(f"\n回答生成完成，开始由 {args.judge_model} 逐题评分。", flush=True)
-    for index, (case, answer) in enumerate(zip(cases, answers), 1):
-        print(f"[评分 {index}/{len(cases)}] {case['id']}：等待裁判返回……", flush=True)
-        started = time.perf_counter()
+    for case, answer in zip(cases, answers):
         result = judge(args.api_url, api_key, args.judge_model, case["messages"], answer)
         rows.append({"id": case["id"], "messages": case["messages"], "answer": answer, "judgement": result})
-        print(f"得分：{result['score']:.2f}/5，耗时 {time.perf_counter() - started:.1f} 秒", flush=True)
-        print("各项分数：" + json.dumps(result["scores"], ensure_ascii=False), flush=True)
-        print("裁判评语：" + result["reason"], flush=True)
+        print(json.dumps({"id": case["id"], "score": result["score"]}, ensure_ascii=False), flush=True)
     report = {
         "evaluation_mode": "single_model",
         "rubric_version": RUBRIC_VERSION,
@@ -220,7 +215,6 @@ def main() -> None:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"\n评估完成，平均分：{report['summary']['mean_score']:.2f}/5，报告：{args.output}", flush=True)
     print(json.dumps({"label": args.label, **report["summary"], "output": str(args.output)}, ensure_ascii=False), flush=True)
 
 
