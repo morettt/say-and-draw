@@ -40,29 +40,23 @@ class SingleModelEvaluationTests(unittest.TestCase):
                 transformers = SimpleNamespace(
                     AutoTokenizer=SimpleNamespace(from_pretrained=lambda *a, **k: tokenizer),
                     Qwen3_5ForConditionalGeneration=SimpleNamespace(from_pretrained=lambda *a, **k: model),
-                    TextStreamer=MagicMock(),
                 )
                 console = io.StringIO()
-                def generate_live(**kwargs):
-                    # Verify the question is visible before model.generate runs.
-                    self.assertIn('[1/1]', console.getvalue())
-                    self.assertIn('用户：你好', console.getvalue())
-                    self.assertIn('模型回答（生成中）：', console.getvalue())
-                    self.assertIs(kwargs['streamer'], transformers.TextStreamer.return_value)
-                    print('正在', end='', flush=True)
-                    self.assertIn('正在', console.getvalue())
-                    print('回答', flush=True)
-                    self.assertNotIn('[生成完成', console.getvalue())
+                logging = MagicMock()
+                def generate_quiet(**kwargs):
+                    self.assertNotIn('streamer', kwargs)
+                    self.assertEqual(console.getvalue(), '')
                     return generated
-                model.generate.side_effect = generate_live
-                with patch.dict('sys.modules', {'torch': torch, 'transformers': transformers}), contextlib.redirect_stdout(console):
+                model.generate.side_effect = generate_quiet
+                with patch.dict('sys.modules', {'torch': torch, 'transformers': transformers, 'transformers.utils': SimpleNamespace(logging=logging)}), contextlib.redirect_stdout(console):
                     answers = evaluation.generate_answers(Path('model'), [{'messages': [{'role': 'user', 'content': '你好'}]}], 160)
                 self.assertEqual(answers, ['回答'])
                 torch.tensor.assert_called_once_with([[11, 12, 13]], dtype='long', device='cpu')
                 generated.__getitem__.assert_called_once_with((0, slice(3, None)))
                 self.assertEqual(model.generate.call_args.kwargs['pad_token_id'], 0)
-                transformers.TextStreamer.assert_called_once_with(tokenizer, skip_prompt=True, skip_special_tokens=False)
-                self.assertIn('[生成完成 1/1', console.getvalue())
+                self.assertEqual(console.getvalue(), '')
+                logging.set_verbosity_error.assert_called_once()
+                logging.disable_progress_bar.assert_called_once()
 
     def test_output_directory_rejected_before_model_load(self):
         with tempfile.TemporaryDirectory() as directory:
