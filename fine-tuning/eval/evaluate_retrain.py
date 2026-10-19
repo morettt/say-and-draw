@@ -1,9 +1,15 @@
-from project_paths import SMOOTH_VQ, STRUCTURED_DECODER, CONTROL_GENERATOR, HANDWRITING_EVAL_DIR
+import sys
+from pathlib import Path
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from project_paths import ROOT, SMOOTH_VQ, STRUCTURED_DECODER, CONTROL_GENERATOR, HANDWRITING_EVAL_DIR
 import sys,json,os,numpy as np,torch
 from pathlib import Path
 from PIL import Image,ImageDraw
 from PIL import ImageFilter
-u=Path(__file__).resolve().parent
+u=ROOT
 sys.path.insert(0,str(u))
 from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ

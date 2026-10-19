@@ -1,0 +1,36 @@
+# 评估工具
+
+以下命令在 `fine-tuning/` 目录执行。
+
+## 单模型对话评分
+
+`evaluate_dialogue_regression.py` 每次加载一份 Qwen 模型，由独立裁判逐题评分。
+默认用例为本目录的 `dialogue_holdout.jsonl`，包含 20 条未参与训练的问题。
+
+评估未微调的基础模型：
+
+```powershell
+python eval/evaluate_dialogue_regression.py --model models/qwen3.5-0.8b --label base_qwen35 --output eval/dialogue_runs/base_qwen35.json
+```
+
+评估微调后的模型：
+
+```powershell
+python eval/evaluate_dialogue_regression.py --model runs/qwen_confirmation/best --label stage5 --output eval/dialogue_runs/stage5.json
+```
+
+可通过 `ALI_QWEN_API_KEY` 配置裁判密钥，`--cases` 指定其他测试用例，`--judge-model` 指定裁判模型。
+报告包含逐题回答、四项分数和理由、平均分及评估配置。比较报告时保持测试用例、裁判和生成参数一致。
+Qwen 训练流水线会在每阶段结束后调用此脚本；`--skip-dialogue-eval` 可跳过。
+
+## 笔迹质量评估
+
+```powershell
+python eval/evaluate_retrain.py
+```
+
+需要 CUDA 和已训练的小模型、VQ、结构化笔画解码器权重。
+默认评估 `runs/small_transformer/control_gen_1600.pt`，可通过 `GENERATOR` 环境变量指定其他生成器。
+评估结果和缓存写入 `runs/small_transformer/eval/`。
+
+两份脚本也支持模块形式，例如 `python -m eval.evaluate_dialogue_regression --help`。

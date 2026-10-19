@@ -26,7 +26,7 @@ from pathlib import Path
 STATE_PATH = ROOT / "qwen35_pipeline_state.json"
 MODEL_ID = QWEN_MODEL_ID
 MODEL_DIR = QWEN_BASE_DIR
-EVAL_SCRIPT = ROOT / "evaluate_dialogue_regression.py"
+EVAL_SCRIPT = ROOT / "eval" / "evaluate_dialogue_regression.py"
 EVAL_DIR = ROOT / "eval" / "dialogue_runs"
 
 STAGES = {
@@ -185,18 +185,16 @@ def check_environment(dry_run: bool, require_dialogue_eval: bool) -> None:
         )
 
 
-def run_dialogue_eval(label: str, candidate: Path, dry_run: bool) -> None:
+def run_dialogue_eval(label: str, model: Path, dry_run: bool) -> None:
     if not EVAL_SCRIPT.is_file():
         raise SystemExit(f"缺少对话评估脚本：{EVAL_SCRIPT.name}")
     output = EVAL_DIR / f"{label}.json"
     command = [
         sys.executable,
         "-u",
-        EVAL_SCRIPT.name,
-        "--baseline",
-        str(MODEL_DIR),
-        "--candidate",
-        str(candidate),
+        str(EVAL_SCRIPT.relative_to(ROOT)),
+        "--model",
+        str(model),
         "--label",
         label,
         "--output",
