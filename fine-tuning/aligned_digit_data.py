@@ -1,7 +1,7 @@
-﻿from pathlib import Path
+from project_paths import DATA_DIR
 import numpy as np
 
-BASE=Path(__file__).resolve().parent / "data"
+BASE = DATA_DIR
 
 def resample(p,n):
     xy=p[:,:2].astype(np.float64)

@@ -1,9 +1,11 @@
+from project_paths import SMOOTH_VQ, STRUCTURED_DECODER, prepare_handwriting_outputs
 import sys,json,time,numpy as np,torch
 from pathlib import Path
 u=Path(__file__).resolve().parent
 sys.path.insert(0,str(u))
 from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ
+prepare_handwriting_outputs()
 torch.set_num_threads(4);torch.manual_seed(1901)
 xy,labels,held=load()
 a=np.load(u/'data'/'digits_all.npz')
@@ -19,7 +21,7 @@ p=torch.tensor(pen,device='cuda')
 tr=torch.tensor(np.where(~held)[0],device='cuda')
 va=torch.tensor(np.where(held)[0],device='cuda')
 vq=AlignedVQ().cuda().eval()
-vq.load_state_dict(torch.load(u/'data'/'aligned_vq_smooth.pt',weights_only=False)['model'])
+vq.load_state_dict(torch.load(SMOOTH_VQ,weights_only=False)['model'])
 with torch.no_grad():q=vq.book(vq.encode(x)[1]).detach()
 fullmask=(~p[:,1:]).float()[:,:,None]
 oldmask=torch.ones_like(fullmask);oldmask[labs==4,31]=0;oldmask[labs==5,53]=0
@@ -83,7 +85,7 @@ for step in range(1,8001):
   criterion=g.item()+.03*(1-correct/len(va))
   if criterion<best:
    best=criterion
-   torch.save({'model':m.state_dict(),'step':step,'score':g.item(),'count_correct':correct},str(u/'structured_decoder.pt'))
+   torch.save({'model':m.state_dict(),'step':step,'score':g.item(),'count_correct':correct},str(STRUCTURED_DECODER))
   print(json.dumps(dict(step=step,score=g.item(),coord=c.item(),endpoints=ep.item(),count=correct,total=len(va),seconds=round(time.time()-start))),flush=True)
 print('DONE',flush=True)
 

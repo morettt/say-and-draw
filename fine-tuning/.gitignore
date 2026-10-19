@@ -1,2 +1,6 @@
 eval/dialogue_runs/
 qwen35_pipeline_state.json
+models/
+runs/
+__pycache__/
+pipeline_state.json

@@ -1,12 +1,13 @@
-﻿"""Controlled continuation: identical BF16 compute, differing AdamW/master precision."""
+"""Controlled continuation: identical BF16 compute, differing AdamW/master precision."""
+from project_paths import ROOT, SMOOTH_VQ, QWEN_STAGE1_DIR, QWEN_PRECISION_DIR
 import hashlib,json,random,sys,time
 from pathlib import Path
 import numpy as np
 import torch
 from transformers import AutoTokenizer,Qwen3_5ForConditionalGeneration
 
-ROOT=Path(__file__).resolve().parent;SRC=ROOT/'runs'/'qwen_stage1_oldmethod_restart'
-RUN=ROOT/'runs'/'qwen_precision_oldmethod';arm=sys.argv[1]
+SRC=QWEN_STAGE1_DIR
+RUN=QWEN_PRECISION_DIR;arm=sys.argv[1]
 assert arm in ('bf16','fp32_master')
 OUT=RUN/arm;OUT.mkdir(parents=True,exist_ok=False)
 sys.path.insert(0,str(ROOT))
@@ -16,7 +17,7 @@ torch.set_num_threads(4)
 xy,lab,_=load();rng=random.Random(42);tr=[];va=[]
 for c in range(36):
  ix=np.flatnonzero(lab==c).tolist();rng.shuffle(ix);n=max(1,round(len(ix)*.15));va+=ix[:n];tr+=ix[n:]
-v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(ROOT/'data/aligned_vq_smooth.pt',weights_only=False)['model'])
+v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(SMOOTH_VQ,weights_only=False)['model'])
 with torch.no_grad():raw=v.encode(torch.tensor(xy,device='cuda'))[1].cpu().numpy()
 del v;torch.cuda.empty_cache()
 tok=AutoTokenizer.from_pretrained(SRC)

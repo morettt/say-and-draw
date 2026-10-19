@@ -1,3 +1,4 @@
+from project_paths import QWEN_BASE_DIR, SMOOTH_VQ, QWEN_STAGE1_DIR
 import json,random,time
 import sys
 from pathlib import Path
@@ -6,13 +7,12 @@ from transformers import Qwen3_5ForConditionalGeneration, AutoTokenizer
 import sys
 PROJECT=Path(__file__).resolve().parent
 sys.path.insert(0,str(PROJECT))
-from aligned_digit_data import load,BASE
-SRC=PROJECT/'qwen3.5-0.8b'; OUT=PROJECT/'runs'/'qwen_stage1_oldmethod_restart'; OUT.mkdir(parents=True,exist_ok=True)
+from aligned_digit_data import load
+SRC=QWEN_BASE_DIR; OUT=QWEN_STAGE1_DIR; OUT.mkdir(parents=True,exist_ok=True)
 CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'; SYSTEM='You generate handwriting codes. Output exactly 16 code tokens.'
 random.seed(42);np.random.seed(42);torch.manual_seed(42);torch.set_num_threads(4); dev='cuda'
 xy,lab,held=load(); lab=np.asarray(lab)
-codec_path=PROJECT/'data'/'aligned_vq_smooth.pt'
-sys.path.insert(0,str(codec_path.parent)) if False else None
+codec_path=SMOOTH_VQ
 from aligned_vq_model import AlignedVQ
 codec=AlignedVQ().to(dev).eval();codec.load_state_dict(torch.load(codec_path,map_location=dev,weights_only=False)['model'])
 with torch.no_grad(): raw=codec.encode(torch.tensor(xy,device=dev))[1].cpu().numpy().astype(int)

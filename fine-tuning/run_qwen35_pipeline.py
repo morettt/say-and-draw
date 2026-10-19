@@ -11,6 +11,7 @@ stages.
 """
 
 from __future__ import annotations
+from project_paths import ROOT, QWEN_MODEL_ID, QWEN_BASE_DIR, SMOOTH_VQ, QWEN_STAGE1_DIR, QWEN_FP32_DIR, QWEN_CHAT_DIR, QWEN_MULTITURN_DIR, QWEN_CONFIRMATION_DIR
 
 import argparse
 import json
@@ -22,10 +23,9 @@ import time
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
 STATE_PATH = ROOT / "qwen35_pipeline_state.json"
-MODEL_ID = "Qwen/Qwen3.5-0.8B"
-MODEL_DIR = ROOT / "qwen3.5-0.8b"
+MODEL_ID = QWEN_MODEL_ID
+MODEL_DIR = QWEN_BASE_DIR
 EVAL_SCRIPT = ROOT / "evaluate_dialogue_regression.py"
 EVAL_DIR = ROOT / "eval" / "dialogue_runs"
 
@@ -34,36 +34,36 @@ STAGES = {
         "name": "Qwen3.5 handwriting stage 1",
         "script": "train_qwen35_handwriting_stage1_repro.py",
         "args": [],
-        "model": ROOT / "runs" / "qwen_stage1_oldmethod_restart",
-        "outputs": [ROOT / "runs" / "qwen_stage1_oldmethod_restart" / "training_info.json"],
+        "model": QWEN_STAGE1_DIR,
+        "outputs": [QWEN_STAGE1_DIR / "training_info.json"],
     },
     2: {
         "name": "FP32 master continuation",
         "script": "train_precision_ablation_oldmethod.py",
         "args": ["fp32_master"],
-        "model": ROOT / "runs" / "qwen_precision_oldmethod" / "fp32_master",
-        "outputs": [ROOT / "runs" / "qwen_precision_oldmethod" / "fp32_master" / "TRAIN_DONE"],
+        "model": QWEN_FP32_DIR,
+        "outputs": [QWEN_FP32_DIR / "TRAIN_DONE"],
     },
     3: {
         "name": "Chat and handwriting mixed training",
         "script": "train_chat_letters.py",
         "args": [],
-        "model": ROOT / "runs" / "qwen_chat_letters" / "best",
-        "outputs": [ROOT / "runs" / "qwen_chat_letters" / "TRAIN_DONE"],
+        "model": QWEN_CHAT_DIR / "best",
+        "outputs": [QWEN_CHAT_DIR / "TRAIN_DONE"],
     },
     4: {
         "name": "Multi-turn training",
         "script": "train_multiturn.py",
         "args": [],
-        "model": ROOT / "runs" / "qwen_multiturn" / "best",
-        "outputs": [ROOT / "runs" / "qwen_multiturn" / "TRAIN_DONE"],
+        "model": QWEN_MULTITURN_DIR / "best",
+        "outputs": [QWEN_MULTITURN_DIR / "TRAIN_DONE"],
     },
     5: {
         "name": "Confirmation-dialog training",
         "script": "train_confirmation.py",
         "args": [],
-        "model": ROOT / "runs" / "qwen_confirmation" / "best",
-        "outputs": [ROOT / "runs" / "qwen_confirmation" / "TRAIN_DONE"],
+        "model": QWEN_CONFIRMATION_DIR / "best",
+        "outputs": [QWEN_CONFIRMATION_DIR / "TRAIN_DONE"],
     },
 }
 
@@ -164,7 +164,7 @@ def check_environment(dry_run: bool, require_dialogue_eval: bool) -> None:
 
     required = [
         ROOT / "data" / "digits_all.npz",
-        ROOT / "data" / "aligned_vq_smooth.pt",
+        SMOOTH_VQ,
     ]
     missing = [str(path.relative_to(ROOT)) for path in required if not path.exists()]
     if missing:

@@ -1,10 +1,12 @@
+from project_paths import ALIGNED_VQ, prepare_handwriting_outputs
 import json,time
 from pathlib import Path
 import torch
 from torch import nn
 from torch.nn import functional as F
-from aligned_digit_data import load,BASE
+from aligned_digit_data import load
 
+prepare_handwriting_outputs()
 torch.manual_seed(924);torch.set_num_threads(4)
 class AlignedVQ(nn.Module):
     def __init__(self):
@@ -49,6 +51,6 @@ for step in range(1,12001):
             value=float(val)
         if value<best:
             best=value;best_step=step
-            torch.save({'model':model.state_dict(),'step':step,'val':value,'codes':256,'groups':16},BASE/'aligned_vq.pt')
+            torch.save({'model':model.state_dict(),'step':step,'val':value,'codes':256,'groups':16},ALIGNED_VQ)
         print(json.dumps({'step':step,'val':round(value,5),'coord':round(float(coord),5),'speed':round(float(speed),5),'used':used,'best_step':best_step,'seconds':round(time.time()-start)}),flush=True)
 print(json.dumps({'finished':True,'best_step':best_step,'best_val':best,'seconds':round(time.time()-start)}),flush=True)

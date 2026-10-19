@@ -1,9 +1,10 @@
 """Mixed text/drawing continuation of the best digit+A-Z checkpoint."""
+from project_paths import ROOT, SMOOTH_VQ, QWEN_CHAT_DIR, QWEN_MULTITURN_DIR
 import json,random,time,sys,gc
 from pathlib import Path
 import numpy as np,torch
 from transformers import AutoTokenizer,Qwen3_5ForConditionalGeneration
-ROOT=Path(__file__).resolve().parent;SRC=ROOT/'runs'/'qwen_chat_letters'/'best';OUT=ROOT/'runs'/'qwen_multiturn'
+SRC=QWEN_CHAT_DIR/'best';OUT=QWEN_MULTITURN_DIR
 OUT.mkdir(parents=True,exist_ok=False);sys.path.insert(0,str(ROOT))
 from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ
@@ -14,7 +15,7 @@ torch.set_num_threads(4);torch.manual_seed(1610);rng=random.Random(1610)
 xy,lab,_=load();split=random.Random(42);tr=[];va=[]
 for c in range(36):
  ix=np.flatnonzero(lab==c).tolist();split.shuffle(ix);n=max(1,round(len(ix)*.15));va+=ix[:n];tr+=ix[n:]
-v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(ROOT/'data'/'aligned_vq_smooth.pt',weights_only=False)['model'])
+v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(SMOOTH_VQ,weights_only=False)['model'])
 with torch.no_grad():raw=v.encode(torch.tensor(xy,device='cuda'))[1].cpu().numpy()
 del v;torch.cuda.empty_cache()
 tok=AutoTokenizer.from_pretrained(SRC);draw=tok.convert_tokens_to_ids('<DRAW>');end=tok.convert_tokens_to_ids('<END_DRAW>');cid=[tok.convert_tokens_to_ids(f'<M{i:03d}>') for i in range(256)];ct=torch.tensor(cid,device='cuda')
