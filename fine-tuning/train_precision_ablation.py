@@ -1,5 +1,5 @@
 """Controlled continuation: identical BF16 compute, differing AdamW/master precision."""
-from project_paths import ROOT, RUNS_DIR, SMOOTH_VQ
+from project_paths import ROOT, RUNS_DIR
 import hashlib,json,random,sys,time
 from pathlib import Path
 import numpy as np
@@ -11,29 +11,21 @@ RUN=RUNS_DIR/'qwen_precision_ablation';arm=sys.argv[1]
 assert arm in ('bf16','fp32_master')
 OUT=RUN/arm;OUT.mkdir(parents=True,exist_ok=False)
 sys.path.insert(0,str(ROOT))
-from aligned_digit_data import load
-from aligned_vq_model import AlignedVQ
+from data_tools.qwen import load_handwriting, encode_example
 torch.set_num_threads(4)
-xy,lab,_=load();rng=random.Random(42);tr=[];va=[]
-for c in range(36):
- ix=np.flatnonzero(lab==c).tolist();rng.shuffle(ix);n=max(1,round(len(ix)*.15));va+=ix[:n];tr+=ix[n:]
-v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(SMOOTH_VQ,weights_only=False)['model'])
-with torch.no_grad():raw=v.encode(torch.tensor(xy,device='cuda'))[1].cpu().numpy()
-del v;torch.cuda.empty_cache()
+dataset=load_handwriting('stage1')
+lab=np.asarray(dataset.labels);raw=np.asarray(dataset.codes);tr=dataset.train.copy();va=dataset.validation.copy()
 tok=AutoTokenizer.from_pretrained(SRC)
-chars='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ';system='You generate handwriting codes. Output exactly 16 code tokens.'
-templates=['Draw the character {c}.','Generate handwriting for {c}.','Write character {c}.']
-prefixes={(c,t):tok.apply_chat_template([{'role':'system','content':system},{'role':'user','content':p.format(c=c)}],tokenize=True,add_generation_prompt=True,enable_thinking=False)['input_ids'] for c in chars for t,p in enumerate(templates)}
 draw=tok.convert_tokens_to_ids('<DRAW>');end=tok.convert_tokens_to_ids('<END_DRAW>')
 cid=np.array([tok.convert_tokens_to_ids(f'<M{i:03d}>') for i in range(256)])
 schedule_rng=random.Random(20261015);schedule=[]
 for ep in range(10):
- order=tr.copy();schedule_rng.shuffle(order);schedule.append([(i,schedule_rng.randrange(3)) for i in order])
+ order=tr.copy();schedule_rng.shuffle(order);schedule.append([(i,schedule_rng.randrange(len(dataset.examples[i]))) for i in order])
 schedule_hash=hashlib.sha256(json.dumps(schedule).encode()).hexdigest()
 def batch(rows):
  seq=[];starts=[]
  for i,t in rows:
-  pre=prefixes[chars[lab[i]],t];starts.append(len(pre));seq.append(pre+[draw]+cid[raw[i]].tolist()+[end,tok.eos_token_id])
+  sequence,p,_=encode_example(tok,dataset.examples[i][t]);starts.append(p);seq.append(sequence)
  x=torch.full((len(rows),max(map(len,seq))),tok.pad_token_id,dtype=torch.long,device='cuda');mask=torch.zeros_like(x);y=torch.full_like(x,-100)
  for j,(s,p) in enumerate(zip(seq,starts)):
   x[j,:len(s)]=torch.tensor(s,device='cuda');mask[j,:len(s)]=1;y[j,p:len(s)]=x[j,p:len(s)]

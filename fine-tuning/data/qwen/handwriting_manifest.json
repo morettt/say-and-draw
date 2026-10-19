@@ -1,0 +1,7 @@
+{
+  "source_sha256": "f964a3b22d068a9e40c0b15f69e46bb81feb77d5ca43a35d66b59111cb37b5ec",
+  "codec_sha256": "6f9959d50dccef42241b5f1d522732790efbbd8ade5c11d70263e7418b439f9d",
+  "samples": 799,
+  "train": 686,
+  "validation": 113
+}

@@ -11,7 +11,7 @@ stages.
 """
 
 from __future__ import annotations
-from project_paths import ROOT, QWEN_MODEL_ID, QWEN_BASE_DIR, SMOOTH_VQ, QWEN_STAGE1_DIR, QWEN_FP32_DIR, QWEN_CHAT_DIR, QWEN_MULTITURN_DIR, QWEN_CONFIRMATION_DIR
+from project_paths import ROOT, QWEN_MODEL_ID, QWEN_BASE_DIR, QWEN_HANDWRITING, QWEN_DRAWING, QWEN_STAGE1_DIR, QWEN_FP32_DIR, QWEN_CHAT_DIR, QWEN_MULTITURN_DIR, QWEN_CONFIRMATION_DIR
 
 import argparse
 import json
@@ -23,6 +23,7 @@ from pathlib import Path
 
 from qwen_model_setup import ensure_qwen_model as prepare_qwen_model
 from training_runs import latest_training_run
+from data_tools.qwen import ensure_handwriting_data
 
 
 STATE_PATH = ROOT / "qwen35_pipeline_state.json"
@@ -120,10 +121,8 @@ def check_environment(dry_run: bool, require_dialogue_eval: bool) -> None:
     if dry_run:
         return
 
-    required = [
-        ROOT / "data" / "digits_all.npz",
-        SMOOTH_VQ,
-    ]
+    ensure_handwriting_data()
+    required = [QWEN_HANDWRITING, QWEN_DRAWING]
     missing = [str(path.relative_to(ROOT)) for path in required if not path.exists()]
     if missing:
         raise SystemExit(

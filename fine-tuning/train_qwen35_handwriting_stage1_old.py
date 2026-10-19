@@ -1,4 +1,4 @@
-from project_paths import RUNS_DIR, QWEN_BASE_DIR, SMOOTH_VQ
+from project_paths import RUNS_DIR, QWEN_BASE_DIR
 from qwen_model_setup import ensure_qwen_model
 from training_runs import create_training_run, complete_training_run
 import argparse
@@ -10,7 +10,7 @@ from transformers import Qwen3_5ForConditionalGeneration, AutoTokenizer
 import sys
 PROJECT=Path(__file__).resolve().parent
 sys.path.insert(0,str(PROJECT))
-from aligned_digit_data import load
+from data_tools.qwen import load_handwriting, encode_example
 parser=argparse.ArgumentParser()
 parser.add_argument('--output-dir',type=Path,help='本次训练的独立输出目录；已存在的目录不会覆盖')
 args=parser.parse_args()
@@ -19,23 +19,16 @@ SRC=ensure_qwen_model(model_dir=QWEN_BASE_DIR); OUT=create_training_run(STAGE_DI
 print(json.dumps({'stage':'output','path':str(OUT)},ensure_ascii=False),flush=True)
 CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'; SYSTEM='你负责生成手写笔迹编号。输出恰好16个编号。'
 random.seed(42);np.random.seed(42);torch.manual_seed(42);torch.set_num_threads(4); dev='cuda'
-xy,lab,held=load(); lab=np.asarray(lab)
-codec_path=SMOOTH_VQ
-from aligned_vq_model import AlignedVQ
-codec=AlignedVQ().to(dev).eval();codec.load_state_dict(torch.load(codec_path,map_location=dev,weights_only=False)['model'])
-with torch.no_grad(): raw=codec.encode(torch.tensor(xy,device=dev))[1].cpu().numpy().astype(int)
-del codec
-# per-character split
-tr=[];va=[]
-for c in range(len(CHARS)):
- ids=np.flatnonzero(lab==c).tolist();random.shuffle(ids);n=max(1,round(len(ids)*.15));va+=ids[:n];tr+=ids[n:]
+dataset=load_handwriting('stage1')
+lab=np.asarray(dataset.labels);raw=np.asarray(dataset.codes);tr=dataset.train.copy();va=dataset.validation.copy()
+SYSTEM=dataset.system
+
 tok=AutoTokenizer.from_pretrained(SRC,local_files_only=True)
 special=['<DRAW>','<END_DRAW>']+[f'<M{i:03d}>' for i in range(256)];tok.add_special_tokens({'additional_special_tokens':special})
 draw=tok.convert_tokens_to_ids('<DRAW>');end=tok.convert_tokens_to_ids('<END_DRAW>');code_ids=np.array([tok.convert_tokens_to_ids(f'<M{i:03d}>') for i in range(256)])
 model=Qwen3_5ForConditionalGeneration.from_pretrained(SRC,local_files_only=True,dtype=torch.bfloat16,attn_implementation='eager').to(dev);model.resize_token_embeddings(len(tok));model.config.use_cache=False;model.gradient_checkpointing_enable()
-prompts=['请写一个{c}。','请生成{c}的手写笔迹。','请把{c}写出来。']
 def seq(i):
- c=CHARS[int(lab[i])]; pre=tok.apply_chat_template([{'role':'system','content':SYSTEM},{'role':'user','content':random.choice(prompts).format(c=c)}],tokenize=True,add_generation_prompt=True,enable_thinking=False)['input_ids']; target=[draw]+[int(code_ids[x]) for x in raw[i]]+[end,tok.eos_token_id];return pre+target,len(pre)
+ row=random.choice(dataset.examples[i]);s,p,_=encode_example(tok,row);return s,p
 def batch(rows):
  w=max(len(x[0]) for x in rows);ids=torch.full((len(rows),w),tok.pad_token_id,dtype=torch.long);mask=torch.zeros_like(ids);ys=torch.full_like(ids,-100)
  for j,(s,p) in enumerate(rows):ids[j,:len(s)]=torch.tensor(s);mask[j,:len(s)]=1;ys[j,p:len(s)]=ids[j,p:len(s)]
