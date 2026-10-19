@@ -15,7 +15,6 @@ import json
 import os
 import re
 import sys
-import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -83,39 +82,33 @@ def load_cases(path: Path) -> list[dict]:
 
 def generate_answers(model_dir: Path, cases: list[dict], max_new_tokens: int) -> list[str]:
     import torch
-    from transformers import AutoTokenizer, Qwen3_5ForConditionalGeneration, TextStreamer
+    from transformers import AutoTokenizer, Qwen3_5ForConditionalGeneration
+    from transformers.utils import logging as transformers_logging
+
+    transformers_logging.set_verbosity_error()
+    transformers_logging.disable_progress_bar()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.bfloat16 if device == "cuda" else torch.float32
-    print(f"正在加载模型：{model_dir}（{device}），共 {len(cases)} 题", flush=True)
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = Qwen3_5ForConditionalGeneration.from_pretrained(
         model_dir, dtype=dtype, attn_implementation="eager"
     ).to(device).eval()
     answers = []
     with torch.inference_mode():
-        for index, case in enumerate(cases, 1):
-            print(f"\n[{index}/{len(cases)}] {case.get('id', index)}", flush=True)
-            for message in case["messages"]:
-                role = {"system": "系统", "user": "用户", "assistant": "历史回答"}.get(message["role"], message["role"])
-                print(f"{role}：{message['content']}", flush=True)
+        for case in cases:
             rendered = tokenizer.apply_chat_template(
                 case["messages"], tokenize=True, add_generation_prompt=True, enable_thinking=False
             )
             input_ids = rendered["input_ids"] if isinstance(rendered, Mapping) else rendered
             x = torch.tensor([input_ids], dtype=torch.long, device=device)
-            streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=False)
-            print("模型回答（生成中）：", end="", flush=True)
-            started = time.perf_counter()
             output = model.generate(
                 input_ids=x,
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
-                streamer=streamer,
                 pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
             )[0, len(input_ids) :]
             answers.append(tokenizer.decode(output, skip_special_tokens=False).strip())
-            print(f"[生成完成 {index}/{len(cases)}，耗时 {time.perf_counter() - started:.1f} 秒]", flush=True)
     del model, tokenizer
     if device == "cuda":
         torch.cuda.empty_cache()
