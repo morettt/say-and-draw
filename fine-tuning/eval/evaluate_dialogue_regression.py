@@ -107,9 +107,14 @@ def generate_answers(model_dir: Path, cases: list[dict], max_new_tokens: int) ->
                 input_ids=x,
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
+                # Training targets end with the tokenizer's chat EOS. Saved
+                # generation_config may instead contain endoftext: override it.
+                eos_token_id=tokenizer.eos_token_id,
                 pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
             )[0, len(input_ids) :]
-            answers.append(tokenizer.decode(output, skip_special_tokens=False).strip())
+            answer = tokenizer.decode(output, skip_special_tokens=False).strip()
+            # Retain drawing markers for scoring, but not the normal chat EOS.
+            answers.append(answer.removesuffix(tokenizer.eos_token).strip())
     del model, tokenizer
     if device == "cuda":
         torch.cuda.empty_cache()
@@ -197,7 +202,8 @@ def main() -> None:
         "judge_prompt": JUDGE_SYSTEM,
         "cases_file": str(args.cases),
         "cases_sha256": hashlib.sha256(args.cases.read_bytes()).hexdigest(),
-        "generation": {"max_new_tokens": args.max_new_tokens, "do_sample": False, "enable_thinking": False},
+        "generation": {"max_new_tokens": args.max_new_tokens, "do_sample": False, "enable_thinking": False,
+                       "eos_source": "tokenizer.eos_token_id"},
         "cases": len(cases),
         "summary": {
             "mean_score": sum(row["judgement"]["score"] for row in rows) / len(rows),
