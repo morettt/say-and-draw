@@ -10,7 +10,7 @@ PROJECT=Path(__file__).resolve().parent
 sys.path.insert(0,str(PROJECT))
 from aligned_digit_data import load
 SRC=ensure_qwen_model(model_dir=QWEN_BASE_DIR); OUT=QWEN_STAGE1_DIR; OUT.mkdir(parents=True,exist_ok=True)
-CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'; SYSTEM='You generate handwriting codes. Output exactly 16 code tokens.'
+CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'; SYSTEM='你负责生成手写笔迹编号。输出恰好16个编号。'
 random.seed(42);np.random.seed(42);torch.manual_seed(42);torch.set_num_threads(4); dev='cuda'
 xy,lab,held=load(); lab=np.asarray(lab)
 codec_path=SMOOTH_VQ
@@ -26,7 +26,7 @@ tok=AutoTokenizer.from_pretrained(SRC,local_files_only=True)
 special=['<DRAW>','<END_DRAW>']+[f'<M{i:03d}>' for i in range(256)];tok.add_special_tokens({'additional_special_tokens':special})
 draw=tok.convert_tokens_to_ids('<DRAW>');end=tok.convert_tokens_to_ids('<END_DRAW>');code_ids=np.array([tok.convert_tokens_to_ids(f'<M{i:03d}>') for i in range(256)])
 model=Qwen3_5ForConditionalGeneration.from_pretrained(SRC,local_files_only=True,dtype=torch.bfloat16,attn_implementation='eager').to(dev);model.resize_token_embeddings(len(tok));model.config.use_cache=False;model.gradient_checkpointing_enable()
-prompts=['Draw the character {c}.','Generate handwriting for {c}.','Write character {c}.']
+prompts=['请写一个{c}。','请生成{c}的手写笔迹。','请把{c}写出来。']
 def seq(i):
  c=CHARS[int(lab[i])]; pre=tok.apply_chat_template([{'role':'system','content':SYSTEM},{'role':'user','content':random.choice(prompts).format(c=c)}],tokenize=True,add_generation_prompt=True,enable_thinking=False)['input_ids']; target=[draw]+[int(code_ids[x]) for x in raw[i]]+[end,tok.eos_token_id];return pre+target,len(pre)
 def batch(rows):
