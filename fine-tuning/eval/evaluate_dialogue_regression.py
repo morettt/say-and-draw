@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -82,29 +83,39 @@ def load_cases(path: Path) -> list[dict]:
 
 def generate_answers(model_dir: Path, cases: list[dict], max_new_tokens: int) -> list[str]:
     import torch
-    from transformers import AutoTokenizer, Qwen3_5ForConditionalGeneration
+    from transformers import AutoTokenizer, Qwen3_5ForConditionalGeneration, TextStreamer
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.bfloat16 if device == "cuda" else torch.float32
+    print(f"正在加载模型：{model_dir}（{device}），共 {len(cases)} 题", flush=True)
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = Qwen3_5ForConditionalGeneration.from_pretrained(
         model_dir, dtype=dtype, attn_implementation="eager"
     ).to(device).eval()
     answers = []
     with torch.inference_mode():
-        for case in cases:
+        for index, case in enumerate(cases, 1):
+            print(f"\n[{index}/{len(cases)}] {case.get('id', index)}", flush=True)
+            for message in case["messages"]:
+                role = {"system": "系统", "user": "用户", "assistant": "历史回答"}.get(message["role"], message["role"])
+                print(f"{role}：{message['content']}", flush=True)
             rendered = tokenizer.apply_chat_template(
                 case["messages"], tokenize=True, add_generation_prompt=True, enable_thinking=False
             )
             input_ids = rendered["input_ids"] if isinstance(rendered, Mapping) else rendered
             x = torch.tensor([input_ids], dtype=torch.long, device=device)
+            streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=False)
+            print("模型回答（生成中）：", end="", flush=True)
+            started = time.perf_counter()
             output = model.generate(
                 input_ids=x,
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
+                streamer=streamer,
                 pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
             )[0, len(input_ids) :]
             answers.append(tokenizer.decode(output, skip_special_tokens=False).strip())
+            print(f"[生成完成 {index}/{len(cases)}，耗时 {time.perf_counter() - started:.1f} 秒]", flush=True)
     del model, tokenizer
     if device == "cuda":
         torch.cuda.empty_cache()
@@ -175,10 +186,15 @@ def main() -> None:
     if len(answers) != len(cases):
         raise ValueError("模型回答数量与评估用例数量不一致")
     rows = []
-    for case, answer in zip(cases, answers):
+    print(f"\n回答生成完成，开始由 {args.judge_model} 逐题评分。", flush=True)
+    for index, (case, answer) in enumerate(zip(cases, answers), 1):
+        print(f"[评分 {index}/{len(cases)}] {case['id']}：等待裁判返回……", flush=True)
+        started = time.perf_counter()
         result = judge(args.api_url, api_key, args.judge_model, case["messages"], answer)
         rows.append({"id": case["id"], "messages": case["messages"], "answer": answer, "judgement": result})
-        print(json.dumps({"id": case["id"], "score": result["score"]}, ensure_ascii=False), flush=True)
+        print(f"得分：{result['score']:.2f}/5，耗时 {time.perf_counter() - started:.1f} 秒", flush=True)
+        print("各项分数：" + json.dumps(result["scores"], ensure_ascii=False), flush=True)
+        print("裁判评语：" + result["reason"], flush=True)
     report = {
         "evaluation_mode": "single_model",
         "rubric_version": RUBRIC_VERSION,
@@ -202,6 +218,7 @@ def main() -> None:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"\n评估完成，平均分：{report['summary']['mean_score']:.2f}/5，报告：{args.output}", flush=True)
     print(json.dumps({"label": args.label, **report["summary"], "output": str(args.output)}, ensure_ascii=False), flush=True)
 
 
