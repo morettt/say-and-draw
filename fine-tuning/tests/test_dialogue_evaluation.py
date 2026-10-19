@@ -1,10 +1,12 @@
 import contextlib
+from collections import UserDict
 import io
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from eval import evaluate_dialogue_regression as evaluation
 import run_qwen35_pipeline as pipeline
@@ -18,6 +20,45 @@ def judgement(value):
 
 
 class SingleModelEvaluationTests(unittest.TestCase):
+    def test_generation_accepts_mapping_tokenizer_outputs(self):
+        for rendered in ([11, 12, 13], {'input_ids': [11, 12, 13]}, UserDict({'input_ids': [11, 12, 13]})):
+            with self.subTest(return_type=type(rendered).__name__):
+                tokenizer = MagicMock()
+                tokenizer.apply_chat_template.return_value = rendered
+                tokenizer.decode.return_value = '回答'
+                tokenizer.pad_token_id = 0
+                model = MagicMock()
+                model.to.return_value = model
+                model.eval.return_value = model
+                generated = MagicMock()
+                model.generate.return_value = generated
+                torch = SimpleNamespace(
+                    cuda=SimpleNamespace(is_available=lambda: False),
+                    float32='float32', long='long', tensor=MagicMock(),
+                    inference_mode=contextlib.nullcontext,
+                )
+                transformers = SimpleNamespace(
+                    AutoTokenizer=SimpleNamespace(from_pretrained=lambda *a, **k: tokenizer),
+                    Qwen3_5ForConditionalGeneration=SimpleNamespace(from_pretrained=lambda *a, **k: model),
+                )
+                with patch.dict('sys.modules', {'torch': torch, 'transformers': transformers}):
+                    answers = evaluation.generate_answers(Path('model'), [{'messages': [{'role': 'user', 'content': '你好'}]}], 160)
+                self.assertEqual(answers, ['回答'])
+                torch.tensor.assert_called_once_with([[11, 12, 13]], dtype='long', device='cpu')
+                generated.__getitem__.assert_called_once_with((0, slice(3, None)))
+                self.assertEqual(model.generate.call_args.kwargs['pad_token_id'], 0)
+
+    def test_output_directory_rejected_before_model_load(self):
+        with tempfile.TemporaryDirectory() as directory:
+            argv = ['evaluate', '--model', 'model', '--label', 'base', '--output', directory]
+            error = io.StringIO()
+            with patch('sys.argv', argv), patch.object(evaluation, 'generate_answers') as generate, contextlib.redirect_stderr(error):
+                with self.assertRaises(SystemExit) as stopped:
+                    evaluation.main()
+            self.assertEqual(stopped.exception.code, 2)
+            self.assertIn('--output 必须指定报告文件', error.getvalue())
+            generate.assert_not_called()
+
     def test_parse_scores_and_reject_invalid_judgements(self):
         result = evaluation.parse_judgement('```json\n' + json.dumps({
             "scores": dict(zip(evaluation.SCORE_DIMENSIONS, [5, 4, 3, 2])),
