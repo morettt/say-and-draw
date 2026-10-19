@@ -113,7 +113,7 @@ class SingleModelEvaluationTests(unittest.TestCase):
                     '--cases', str(cases), '--output', str(output)]
             console = io.StringIO()
             def score(*args):
-                self.assertIn(f'[评分 {judge.call_count}/2]', console.getvalue())
+                self.assertEqual(len(console.getvalue().splitlines()), judge.call_count - 1)
                 return judgement(5 if judge.call_count == 1 else 3)
             with patch('sys.argv', argv), patch.object(evaluation, 'generate_answers', return_value=['答一', '答二']) as generate, patch.object(evaluation, 'judge', side_effect=score) as judge, contextlib.redirect_stdout(console):
                 evaluation.main()
@@ -129,8 +129,10 @@ class SingleModelEvaluationTests(unittest.TestCase):
             self.assertEqual(len(report['cases_sha256']), 64)
             self.assertNotIn('baseline_model', report)
             self.assertNotIn('candidate_wins', report['summary'])
-            self.assertIn('裁判评语：评分依据', console.getvalue())
-            self.assertIn('评估完成，平均分：4.00/5', console.getvalue())
+            lines = [json.loads(line) for line in console.getvalue().splitlines()]
+            self.assertEqual(lines[:2], [{'id': '0', 'score': 5.0}, {'id': '1', 'score': 3.0}])
+            self.assertEqual(lines[2]['mean_score'], 4.0)
+            self.assertEqual(len(lines), 3)
 
     def test_empty_cases_fail_before_model_load(self):
         with tempfile.TemporaryDirectory() as directory:
