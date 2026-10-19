@@ -1,5 +1,7 @@
 from project_paths import RUNS_DIR, QWEN_BASE_DIR, SMOOTH_VQ
 from qwen_model_setup import ensure_qwen_model
+from training_runs import create_training_run, complete_training_run
+import argparse
 import json,random,time
 import sys
 from pathlib import Path
@@ -9,7 +11,12 @@ import sys
 PROJECT=Path(__file__).resolve().parent
 sys.path.insert(0,str(PROJECT))
 from aligned_digit_data import load
-SRC=ensure_qwen_model(model_dir=QWEN_BASE_DIR); OUT=RUNS_DIR/'qwen35_handwriting_stage1'; OUT.mkdir(parents=True,exist_ok=True)
+parser=argparse.ArgumentParser()
+parser.add_argument('--output-dir',type=Path,help='本次训练的独立输出目录；已存在的目录不会覆盖')
+args=parser.parse_args()
+STAGE_DIR=RUNS_DIR/'qwen35_handwriting_stage1'
+SRC=ensure_qwen_model(model_dir=QWEN_BASE_DIR); OUT=create_training_run(STAGE_DIR,args.output_dir)
+print(json.dumps({'stage':'output','path':str(OUT)},ensure_ascii=False),flush=True)
 CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'; SYSTEM='你负责生成手写笔迹编号。输出恰好16个编号。'
 random.seed(42);np.random.seed(42);torch.manual_seed(42);torch.set_num_threads(4); dev='cuda'
 xy,lab,held=load(); lab=np.asarray(lab)
@@ -49,5 +56,6 @@ for ep in range(1,36):
  score=ev(va);print(json.dumps({'stage':'epoch','epoch':ep,'train_loss':float(np.mean(ls)),'validation':score,'elapsed_s':round(time.time()-start)},ensure_ascii=False),flush=True)
  if score['loss']<best:
   best=score['loss'];model.save_pretrained(OUT,safe_serialization=True);tok.save_pretrained(OUT);(OUT/'training_info.json').write_text(json.dumps({'epoch':ep,'validation':score,'chars':CHARS},ensure_ascii=False))
+complete_training_run(STAGE_DIR,OUT)
 print(json.dumps({'stage':'finished','best_validation_loss':best,'path':str(OUT)},ensure_ascii=False),flush=True)
 
