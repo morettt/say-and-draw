@@ -1,4 +1,5 @@
-﻿"""Serve the trained digit generator and VQ decoder over HTTP."""
+"""Serve the trained digit generator and VQ decoder over HTTP."""
+from project_paths import ROOT, DATA_DIR, SMOOTH_VQ, STRUCTURED_DECODER, CONTROL_GENERATOR, QWEN_FINAL_DIR
 
 import json
 import os
@@ -13,25 +14,22 @@ import torch
 from transformers import AutoTokenizer, Qwen3_5ForConditionalGeneration
 
 
-ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 sys.path.insert(0, str(ROOT))
 from best_qwen_chat_runtime import infer as infer_qwen_chat
 from causal_vq_model import CausalCodeLM
 from aligned_vq_model import AlignedVQ
 from structured_decoder import StructuredStrokeDecoder
-RETRAIN_DIR = ROOT
-retrain_checkpoint = torch.load(RETRAIN_DIR/'control_gen_1600.pt', map_location=DEVICE, weights_only=False)
+retrain_checkpoint = torch.load(CONTROL_GENERATOR, map_location=DEVICE, weights_only=False)
 retrain_model = CausalCodeLM(retrain_checkpoint['vocab']).to(DEVICE).eval()
 retrain_model.load_state_dict(retrain_checkpoint['model'])
 retrain_used = retrain_checkpoint['used'].to(DEVICE)
 retrain_vq = AlignedVQ().to(DEVICE).eval()
-retrain_vq.load_state_dict(torch.load(RETRAIN_DIR/'data'/'aligned_vq_smooth.pt', map_location=DEVICE, weights_only=False)['model'])
+retrain_vq.load_state_dict(torch.load(SMOOTH_VQ, map_location=DEVICE, weights_only=False)['model'])
 retrain_struct = StructuredStrokeDecoder().to(DEVICE).eval()
-retrain_struct.load_state_dict(torch.load(RETRAIN_DIR/'structured_decoder.pt', map_location=DEVICE, weights_only=False)['model'])
+retrain_struct.load_state_dict(torch.load(STRUCTURED_DECODER, map_location=DEVICE, weights_only=False)['model'])
 torch.seed()
-Q_DIR = Path(__file__).resolve().parent/'runs'/'qwen_confirmation'/'best'
+Q_DIR = QWEN_FINAL_DIR
 q_tok = AutoTokenizer.from_pretrained(Q_DIR)
 q_model = Qwen3_5ForConditionalGeneration.from_pretrained(
     Q_DIR, dtype=torch.bfloat16, attn_implementation='eager'
@@ -264,7 +262,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path in ('/flow', '/transformer'):
             body = FLOW_PAGE.encode('utf-8')
         elif self.path == '/transformer-qwen':
-            body = (DATA_DIR/'qwen_chat_page.html').read_bytes()
+            body = (ROOT/'qwen_chat_page.html').read_bytes()
         elif self.path == '/transformer-new':
             body = NEW_PAGE.encode('utf-8')
         elif self.path == '/new':
@@ -276,7 +274,7 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == '/generate-compare':
             body = DATA_DIR/'生成效果对比.html'.read_bytes()
         elif self.path in ('/', '/index.html'):
-            body = (DATA_DIR/'qwen_chat_page.html').read_bytes()
+            body = (ROOT/'qwen_chat_page.html').read_bytes()
         elif self.path == '/transformer-small':
             body = SMALL_PAGE.encode('utf-8')
         else:

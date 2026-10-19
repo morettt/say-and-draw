@@ -1,3 +1,4 @@
+from project_paths import SMOOTH_VQ, SMALL_RUN_DIR, CAUSAL_GENERATOR, prepare_handwriting_outputs
 import sys,json,time,numpy as np,torch
 from pathlib import Path
 import torch.nn.functional as F
@@ -6,10 +7,11 @@ from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ
 from causal_vq_model import CausalCodeLM
 from conditioned_model import ConditionedCodeLM
+prepare_handwriting_outputs()
 torch.set_num_threads(4)
 xy,labels,held=load();x=torch.tensor(xy,device='cuda');d=torch.tensor(labels,device='cuda')
-v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(u/'data'/'aligned_vq_smooth.pt',weights_only=False)['model'])
-cp=torch.load(u/'data'/'causal_vq_generator.pt',weights_only=False);used=cp['used'].cuda()
+v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(SMOOTH_VQ,weights_only=False)['model'])
+cp=torch.load(CAUSAL_GENERATOR,weights_only=False);used=cp['used'].cuda()
 with torch.no_grad():raw=v.encode(x)[1];codes=torch.searchsorted(used,raw)
 assert torch.equal(used[codes],raw)
 tr=torch.tensor(np.flatnonzero(~held),device='cuda');va=torch.tensor(np.flatnonzero(held),device='cuda')
@@ -36,7 +38,7 @@ for name,cls in [('control_gen',CausalCodeLM),('condition_gen',ConditionedCodeLM
     acc=(out.argmax(-1)==tgt).float().mean().item()
    print(json.dumps(dict(arm=name,step=step,val=val,acc=acc,seconds=round(time.time()-start))),flush=True)
   if step in (800,1600,2400):
-   torch.save(dict(model=m.state_dict(),used=used.cpu(),vocab=cp['vocab'],step=step,condition_all_positions=(name=='condition_gen')),str(u/(name+'_'+str(step)+'.pt')))
+   torch.save(dict(model=m.state_dict(),used=used.cpu(),vocab=cp['vocab'],step=step,condition_all_positions=(name=='condition_gen')),str(SMALL_RUN_DIR/(name+'_'+str(step)+'.pt')))
 print('DONE',flush=True)
 
 

@@ -1,15 +1,17 @@
+from project_paths import ALIGNED_VQ, SMOOTH_VQ, prepare_handwriting_outputs
 import json,time
 import numpy as np,torch
 from torch import nn
 from torch.nn import functional as F
-from aligned_digit_data import load,BASE
+from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ
 
+prepare_handwriting_outputs()
 torch.manual_seed(925);torch.set_num_threads(4)
 xy,digits,held=load();x=torch.tensor(xy,device='cuda');d=torch.tensor(digits,device='cuda')
 tr=torch.tensor(np.where(~held)[0],device='cuda');va=torch.tensor(np.where(held)[0],device='cuda')
 weights=torch.ones(len(tr),device='cuda');weights[(d[tr]==4)|(d[tr]==5)]=2.5;weights[d[tr]==10]=2.5;weights[d[tr]==11]=2.5;weights[d[tr]==12]=2.5;weights[d[tr]==13]=2.5;weights[d[tr]==14]=2.5;weights[d[tr]==15]=2.5;weights[d[tr]==16]=2.5;weights[d[tr]==17]=2.5;weights[d[tr]==18]=2.5;weights[d[tr]==19]=2.5;weights[d[tr]==20]=2.5;weights[d[tr]==21]=2.5;weights[d[tr]==22]=2.5;weights[d[tr]==23]=2.5;weights[d[tr]==24]=2.5;weights[d[tr]==25]=2.5;weights[d[tr]==26]=2.5;weights[d[tr]==27]=2.5;weights[d[tr]==28]=2.5;weights[d[tr]==29]=2.5;weights[d[tr]==30]=2.5;weights[d[tr]==31]=2.5;weights[d[tr]==32]=2.5;weights[d[tr]==33]=2.5;weights[d[tr]==34]=2.5;weights[d[tr]==35]=2.5
-m=AlignedVQ().cuda();m.load_state_dict(torch.load(BASE/'aligned_vq.pt',map_location='cuda',weights_only=False)['model'])
+m=AlignedVQ().cuda();m.load_state_dict(torch.load(ALIGNED_VQ,map_location='cuda',weights_only=False)['model'])
 opt=torch.optim.AdamW(m.parameters(),lr=1e-4,weight_decay=1e-5)
 def metrics(y,x,z,q,d):
  coord=(y-x).abs().mean()
@@ -34,6 +36,6 @@ for step in range(1,6001):
    used=int(m.encode(x)[1].unique().numel())
   if score<best:
    best=score;best_step=step
-   torch.save({'model':m.state_dict(),'step':step,'score':score,'codes':256,'groups':16},BASE/'aligned_vq_smooth.pt')
+   torch.save({'model':m.state_dict(),'step':step,'score':score,'codes':256,'groups':16},SMOOTH_VQ)
   print(json.dumps({'step':step,'coord':round(float(c),5),'vel':round(float(v),5),'accel':round(float(a),5),'used':used,'best_step':best_step,'seconds':round(time.time()-start)}),flush=True)
 print(json.dumps({'finished':True,'best_step':best_step,'best_score':best,'seconds':round(time.time()-start)}),flush=True)

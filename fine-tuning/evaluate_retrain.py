@@ -1,3 +1,4 @@
+from project_paths import SMOOTH_VQ, STRUCTURED_DECODER, CONTROL_GENERATOR, HANDWRITING_EVAL_DIR
 import sys,json,os,numpy as np,torch
 from pathlib import Path
 from PIL import Image,ImageDraw
@@ -16,11 +17,12 @@ pen=(a['points'][keep,:,2]>0)
 for i,c in enumerate(labels):
  if c in (4,5):pen[i]=False;pen[i,32 if c==4 else 54]=True
 pen[:,0]=True
-v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(u/'data'/'aligned_vq_smooth.pt',weights_only=False)['model'])
-tag=os.getenv('EVAL_TAG','');cp=torch.load(os.getenv('GENERATOR',str(u/'control_gen_1600.pt')),weights_only=False)
+v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(SMOOTH_VQ,weights_only=False)['model'])
+tag=os.getenv('EVAL_TAG','');cp=torch.load(os.getenv('GENERATOR',str(CONTROL_GENERATOR)),weights_only=False)
 from conditioned_model import ConditionedCodeLM
 gen=(ConditionedCodeLM if cp.get('condition_all_positions') else CausalCodeLM)(cp['vocab']).cuda().eval();gen.load_state_dict(cp['model']);used=cp['used'].cuda()
-bank=u/('bank'+tag+'.pt')
+HANDWRITING_EVAL_DIR.mkdir(parents=True,exist_ok=True)
+bank=HANDWRITING_EVAL_DIR/('bank'+tag+'.pt')
 with torch.inference_mode():
  trueq=v.book(v.encode(torch.tensor(xy,device='cuda'))[1])
  if not bank.exists():
@@ -35,7 +37,7 @@ with torch.inference_mode():
  z=torch.load(bank,weights_only=False);gl=z['labels'].numpy();freeq=v.book(z['codes'].cuda())
 def predict(name,q,l):
  if name=='structured':
-  m=StructuredStrokeDecoder().cuda().eval();m.load_state_dict(torch.load(str(u/'structured_decoder.pt'),weights_only=False)['model'])
+  m=StructuredStrokeDecoder().cuda().eval();m.load_state_dict(torch.load(str(STRUCTURED_DECODER),weights_only=False)['model'])
  elif name=='attention':
   m=AttentionStrokeDecoder().cuda().eval();m.load_state_dict(torch.load('/tmp/pen_fix/attention.pt',weights_only=False)['model'])
  else:
@@ -96,9 +98,9 @@ for name in ['structured']:
   free_digits=float(ff[gl<10].mean()),free_letters=float(ff[gl>=10].mean()))
  r['per_char']={c:round(float(ff[gl==i].mean()),4) for i,c in enumerate(chars)}
  print(json.dumps(dict(model=name,**r)),flush=True)
- np.savez_compressed(str(u/(name+tag+'_eval.npz')),recon=y,recon_pen=p,free=fy,free_pen=fp,f1=ff,labels=gl)
+ np.savez_compressed(str(HANDWRITING_EVAL_DIR/(name+tag+'_eval.npz')),recon=y,recon_pen=p,free=fy,free_pen=fp,f1=ff,labels=gl)
  all_results[name]=r
-(u/('evaluation'+tag+'.json')).write_text(json.dumps(all_results,indent=2))
+(HANDWRITING_EVAL_DIR/('evaluation'+tag+'.json')).write_text(json.dumps(all_results,indent=2))
 
 
 

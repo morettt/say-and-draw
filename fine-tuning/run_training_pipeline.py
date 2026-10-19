@@ -11,6 +11,7 @@ completed stages.
 """
 
 from __future__ import annotations
+from project_paths import ROOT, ALIGNED_VQ, SMOOTH_VQ, STRUCTURED_DECODER, SMALL_RUN_DIR, CAUSAL_GENERATOR
 
 import argparse
 import json
@@ -21,34 +22,33 @@ import time
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
 STATE_PATH = ROOT / "pipeline_state.json"
 
 STAGES = {
     1: {
         "name": "AlignedVQ",
         "script": "train_aligned_vq.py",
-        "outputs": [ROOT / "data" / "aligned_vq.pt"],
+        "outputs": [ALIGNED_VQ],
     },
     2: {
         "name": "AlignedVQ smooth",
         "script": "train_aligned_vq_smooth.py",
-        "outputs": [ROOT / "data" / "aligned_vq_smooth.pt"],
+        "outputs": [SMOOTH_VQ],
     },
     3: {
         "name": "Causal Transformer",
         "script": "train_causal_vq.py",
-        "outputs": [ROOT / "data" / "causal_vq_generator.pt"],
+        "outputs": [CAUSAL_GENERATOR],
     },
     4: {
         "name": "Structured stroke decoder",
         "script": "train_structured.py",
-        "outputs": [ROOT / "structured_decoder.pt"],
+        "outputs": [STRUCTURED_DECODER],
     },
     5: {
         "name": "Transformer continuation",
         "script": "train_control.py",
-        "outputs": [ROOT / "control_gen_2400.pt", ROOT / "condition_gen_2400.pt"],
+        "outputs": [SMALL_RUN_DIR / "control_gen_2400.pt", SMALL_RUN_DIR / "condition_gen_2400.pt"],
     },
 }
 

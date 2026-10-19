@@ -1,13 +1,15 @@
+from project_paths import SMOOTH_VQ, CAUSAL_GENERATOR, prepare_handwriting_outputs
 import json,time
 import numpy as np,torch
 from torch import nn
 from torch.nn import functional as F
-from aligned_digit_data import load,BASE
+from aligned_digit_data import load
 from aligned_vq_model import AlignedVQ
 
+prepare_handwriting_outputs()
 torch.manual_seed(801);torch.set_num_threads(4)
 xy,ds,_=load();x=torch.tensor(xy,device='cuda');digits=torch.tensor(ds,device='cuda')
-vq=AlignedVQ().cuda().eval();vq.load_state_dict(torch.load(BASE/'aligned_vq_smooth.pt',map_location='cuda',weights_only=False)['model'])
+vq=AlignedVQ().cuda().eval();vq.load_state_dict(torch.load(SMOOTH_VQ,map_location='cuda',weights_only=False)['model'])
 with torch.no_grad():raw=vq.encode(x)[1]
 used=torch.unique(raw);compact=torch.searchsorted(used,raw);K=len(used)
 BOS=0;DIGIT0=1;CODE0=37;VOCAB=CODE0+K
@@ -59,7 +61,7 @@ for step in range(1,3001):
         val,acc=evaluate()
         if val<best:
             best=val;best_step=step
-            torch.save({'model':model.state_dict(),'used':used.cpu(),'vocab':VOCAB,'step':step,'val':val},BASE/'causal_vq_generator.pt')
+            torch.save({'model':model.state_dict(),'used':used.cpu(),'vocab':VOCAB,'step':step,'val':val},CAUSAL_GENERATOR)
         rec={'step':step,'val':round(val,4),'accuracy':round(acc,4),'best_step':best_step,'seconds':round(time.time()-start)}
         if step%300==0:rec['samples']={str(d):generate(d) for d in (4,5,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)}
         print(json.dumps(rec),flush=True)
