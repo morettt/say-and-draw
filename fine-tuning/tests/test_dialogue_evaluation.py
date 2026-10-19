@@ -99,6 +99,7 @@ class SingleModelEvaluationTests(unittest.TestCase):
         self.assertIn('你好！', payload['messages'][1]['content'])
         self.assertNotIn('ANSWER_B', payload['messages'][1]['content'])
         self.assertEqual(payload['temperature'], 0)
+        self.assertIs(payload['enable_thinking'], False)
         self.assertEqual(result['score'], 4)
 
     def test_main_loads_one_model_and_writes_independent_report(self):
@@ -122,6 +123,8 @@ class SingleModelEvaluationTests(unittest.TestCase):
             self.assertEqual(report['summary']['mean_score'], 4)
             self.assertEqual(report['summary']['dimension_mean_scores']['correctness'], 4)
             self.assertEqual(report['evaluation_mode'], 'single_model')
+            self.assertEqual(report['judge_model'], 'qwen3.8-flash')
+            self.assertIs(report['judge_enable_thinking'], False)
             self.assertEqual(report['rows'][0]['answer'], '答一')
             self.assertEqual(len(report['cases_sha256']), 64)
             self.assertNotIn('baseline_model', report)

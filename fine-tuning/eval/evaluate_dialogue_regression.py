@@ -29,7 +29,7 @@ from project_paths import ROOT
 
 DEFAULT_CASES = ROOT / "eval" / "dialogue_holdout.jsonl"
 DEFAULT_API_URL = "https://llm-1kogbdw5rh8bt640.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
-DEFAULT_JUDGE_MODEL = "qwen3.8-27b"
+DEFAULT_JUDGE_MODEL = "qwen3.8-flash"
 # Configured by the project owner for the built-in dialogue regression judge.
 DEFAULT_API_KEY = "sk-ws-H.PYLEMME.Nu05.MEUCIQD_BVpitVBG56BAMErEc45mZeyR2jeesB9zPn8mT2IjAgIgWuwRuxi9tUG-NEAsogX1FtAi3jiK72qwYrifuOofkvo"
 RUBRIC_VERSION = "dialogue-single-v1"
@@ -155,6 +155,7 @@ def judge(api_url: str, api_key: str, model: str, messages: list[dict], answer: 
             "model": model,
             "messages": [{"role": "system", "content": JUDGE_SYSTEM}, {"role": "user", "content": prompt}],
             "temperature": 0,
+            "enable_thinking": False,
         },
         ensure_ascii=False,
     ).encode("utf-8")
@@ -201,6 +202,7 @@ def main() -> None:
         "label": args.label,
         "model": str(args.model),
         "judge_model": args.judge_model,
+        "judge_enable_thinking": False,
         "judge_api_url": args.api_url,
         "judge_prompt": JUDGE_SYSTEM,
         "cases_file": str(args.cases),
