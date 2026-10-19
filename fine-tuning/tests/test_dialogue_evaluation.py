@@ -40,13 +40,29 @@ class SingleModelEvaluationTests(unittest.TestCase):
                 transformers = SimpleNamespace(
                     AutoTokenizer=SimpleNamespace(from_pretrained=lambda *a, **k: tokenizer),
                     Qwen3_5ForConditionalGeneration=SimpleNamespace(from_pretrained=lambda *a, **k: model),
+                    TextStreamer=MagicMock(),
                 )
-                with patch.dict('sys.modules', {'torch': torch, 'transformers': transformers}):
+                console = io.StringIO()
+                def generate_live(**kwargs):
+                    # Verify the question is visible before model.generate runs.
+                    self.assertIn('[1/1]', console.getvalue())
+                    self.assertIn('用户：你好', console.getvalue())
+                    self.assertIn('模型回答（生成中）：', console.getvalue())
+                    self.assertIs(kwargs['streamer'], transformers.TextStreamer.return_value)
+                    print('正在', end='', flush=True)
+                    self.assertIn('正在', console.getvalue())
+                    print('回答', flush=True)
+                    self.assertNotIn('[生成完成', console.getvalue())
+                    return generated
+                model.generate.side_effect = generate_live
+                with patch.dict('sys.modules', {'torch': torch, 'transformers': transformers}), contextlib.redirect_stdout(console):
                     answers = evaluation.generate_answers(Path('model'), [{'messages': [{'role': 'user', 'content': '你好'}]}], 160)
                 self.assertEqual(answers, ['回答'])
                 torch.tensor.assert_called_once_with([[11, 12, 13]], dtype='long', device='cpu')
                 generated.__getitem__.assert_called_once_with((0, slice(3, None)))
                 self.assertEqual(model.generate.call_args.kwargs['pad_token_id'], 0)
+                transformers.TextStreamer.assert_called_once_with(tokenizer, skip_prompt=True, skip_special_tokens=False)
+                self.assertIn('[生成完成 1/1', console.getvalue())
 
     def test_output_directory_rejected_before_model_load(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -94,7 +110,11 @@ class SingleModelEvaluationTests(unittest.TestCase):
             }) for i in range(2)), encoding='utf-8')
             argv = ['evaluate', '--model', 'models/qwen3.5-0.8b', '--label', 'base',
                     '--cases', str(cases), '--output', str(output)]
-            with patch('sys.argv', argv), patch.object(evaluation, 'generate_answers', return_value=['答一', '答二']) as generate, patch.object(evaluation, 'judge', side_effect=[judgement(5), judgement(3)]) as judge, contextlib.redirect_stdout(io.StringIO()):
+            console = io.StringIO()
+            def score(*args):
+                self.assertIn(f'[评分 {judge.call_count}/2]', console.getvalue())
+                return judgement(5 if judge.call_count == 1 else 3)
+            with patch('sys.argv', argv), patch.object(evaluation, 'generate_answers', return_value=['答一', '答二']) as generate, patch.object(evaluation, 'judge', side_effect=score) as judge, contextlib.redirect_stdout(console):
                 evaluation.main()
             generate.assert_called_once_with(Path('models/qwen3.5-0.8b'), evaluation.load_cases(cases), 160)
             self.assertEqual(judge.call_count, 2)
@@ -106,6 +126,8 @@ class SingleModelEvaluationTests(unittest.TestCase):
             self.assertEqual(len(report['cases_sha256']), 64)
             self.assertNotIn('baseline_model', report)
             self.assertNotIn('candidate_wins', report['summary'])
+            self.assertIn('裁判评语：评分依据', console.getvalue())
+            self.assertIn('评估完成，平均分：4.00/5', console.getvalue())
 
     def test_empty_cases_fail_before_model_load(self):
         with tempfile.TemporaryDirectory() as directory:
