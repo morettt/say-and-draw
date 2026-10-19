@@ -9,6 +9,7 @@ ALI_QWEN_API_KEY if needed.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping
 import hashlib
 import json
 import os
@@ -51,11 +52,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--model", type=Path, required=True, help="本次待评估的 Qwen 模型目录")
     p.add_argument("--label", required=True, help="评估名称，例如 base_qwen35 或 stage1")
     p.add_argument("--cases", type=Path, default=DEFAULT_CASES)
-    p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True, help="报告文件路径，例如 eval/dialogue_runs/base_qwen35.json")
     p.add_argument("--api-url", default=DEFAULT_API_URL)
     p.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL)
     p.add_argument("--max-new-tokens", type=int, default=160)
-    return p.parse_args()
+    args = p.parse_args()
+    if args.output.is_dir():
+        p.error("--output 必须指定报告文件，不能只填写文件夹；例如 --output eval/dialogue_runs/base_qwen35.json")
+    return args
 
 
 def load_cases(path: Path) -> list[dict]:
@@ -92,8 +96,8 @@ def generate_answers(model_dir: Path, cases: list[dict], max_new_tokens: int) ->
             rendered = tokenizer.apply_chat_template(
                 case["messages"], tokenize=True, add_generation_prompt=True, enable_thinking=False
             )
-            input_ids = rendered["input_ids"] if isinstance(rendered, dict) else rendered
-            x = torch.tensor([input_ids], device=device)
+            input_ids = rendered["input_ids"] if isinstance(rendered, Mapping) else rendered
+            x = torch.tensor([input_ids], dtype=torch.long, device=device)
             output = model.generate(
                 input_ids=x,
                 max_new_tokens=max_new_tokens,
