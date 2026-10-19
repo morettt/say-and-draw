@@ -16,11 +16,12 @@ from project_paths import ROOT, QWEN_MODEL_ID, QWEN_BASE_DIR, SMOOTH_VQ, QWEN_ST
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
+
+from qwen_model_setup import ensure_qwen_model as prepare_qwen_model
 
 
 STATE_PATH = ROOT / "qwen35_pipeline_state.json"
@@ -109,52 +110,8 @@ def outputs_exist(stage: dict) -> bool:
     return all(path.is_file() and path.stat().st_size > 0 for path in stage["outputs"])
 
 
-def model_dir_has_files() -> bool:
-    return MODEL_DIR.is_dir() and any(path.is_file() for path in MODEL_DIR.rglob("*"))
-
-
-def modelscope_executable() -> str | None:
-    found = shutil.which("modelscope")
-    if found:
-        return found
-    for candidate in (Path(sys.executable).with_name("modelscope.exe"), Path(sys.executable).with_name("modelscope")):
-        if candidate.is_file():
-            return str(candidate)
-    return None
-
-
 def ensure_qwen_model(dry_run: bool) -> None:
-    if model_dir_has_files():
-        print(f"已找到 Qwen3.5 基础模型：{MODEL_DIR}", flush=True)
-        return
-
-    executable = modelscope_executable() or "modelscope"
-    command = [
-        executable,
-        "download",
-        "--model",
-        MODEL_ID,
-        "--local_dir",
-        str(MODEL_DIR),
-    ]
-    print("未找到有效的 Qwen3.5 基础模型，将从 ModelScope 下载：", flush=True)
-    print("$ " + " ".join(command), flush=True)
-    if dry_run:
-        return
-    if modelscope_executable() is None:
-        raise SystemExit(
-            "找不到 modelscope 命令。请先安装依赖（pip install modelscope），然后重新运行。"
-        )
-
-    MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    env = os.environ.copy()
-    env["PYTHONUNBUFFERED"] = "1"
-    result = subprocess.run(command, cwd=ROOT, env=env)
-    if result.returncode != 0:
-        raise SystemExit(f"ModelScope 下载失败，退出码：{result.returncode}")
-    if not model_dir_has_files():
-        raise SystemExit(f"ModelScope 下载完成，但模型目录仍为空：{MODEL_DIR}")
-    print(f"Qwen3.5 基础模型下载完成：{MODEL_DIR}", flush=True)
+    prepare_qwen_model(dry_run=dry_run, model_dir=MODEL_DIR)
 
 
 def check_environment(dry_run: bool, require_dialogue_eval: bool) -> None:

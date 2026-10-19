@@ -1,4 +1,5 @@
 from project_paths import QWEN_BASE_DIR, SMOOTH_VQ, QWEN_STAGE1_DIR
+from qwen_model_setup import ensure_qwen_model
 import json,random,time
 import sys
 from pathlib import Path
@@ -8,7 +9,7 @@ import sys
 PROJECT=Path(__file__).resolve().parent
 sys.path.insert(0,str(PROJECT))
 from aligned_digit_data import load
-SRC=QWEN_BASE_DIR; OUT=QWEN_STAGE1_DIR; OUT.mkdir(parents=True,exist_ok=True)
+SRC=ensure_qwen_model(model_dir=QWEN_BASE_DIR); OUT=QWEN_STAGE1_DIR; OUT.mkdir(parents=True,exist_ok=True)
 CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'; SYSTEM='You generate handwriting codes. Output exactly 16 code tokens.'
 random.seed(42);np.random.seed(42);torch.manual_seed(42);torch.set_num_threads(4); dev='cuda'
 xy,lab,held=load(); lab=np.asarray(lab)
@@ -21,10 +22,10 @@ del codec
 tr=[];va=[]
 for c in range(len(CHARS)):
  ids=np.flatnonzero(lab==c).tolist();random.shuffle(ids);n=max(1,round(len(ids)*.15));va+=ids[:n];tr+=ids[n:]
-tok=AutoTokenizer.from_pretrained(SRC)
+tok=AutoTokenizer.from_pretrained(SRC,local_files_only=True)
 special=['<DRAW>','<END_DRAW>']+[f'<M{i:03d}>' for i in range(256)];tok.add_special_tokens({'additional_special_tokens':special})
 draw=tok.convert_tokens_to_ids('<DRAW>');end=tok.convert_tokens_to_ids('<END_DRAW>');code_ids=np.array([tok.convert_tokens_to_ids(f'<M{i:03d}>') for i in range(256)])
-model=Qwen3_5ForConditionalGeneration.from_pretrained(SRC,dtype=torch.bfloat16,attn_implementation='eager').to(dev);model.resize_token_embeddings(len(tok));model.config.use_cache=False;model.gradient_checkpointing_enable()
+model=Qwen3_5ForConditionalGeneration.from_pretrained(SRC,local_files_only=True,dtype=torch.bfloat16,attn_implementation='eager').to(dev);model.resize_token_embeddings(len(tok));model.config.use_cache=False;model.gradient_checkpointing_enable()
 prompts=['Draw the character {c}.','Generate handwriting for {c}.','Write character {c}.']
 def seq(i):
  c=CHARS[int(lab[i])]; pre=tok.apply_chat_template([{'role':'system','content':SYSTEM},{'role':'user','content':random.choice(prompts).format(c=c)}],tokenize=True,add_generation_prompt=True,enable_thinking=False)['input_ids']; target=[draw]+[int(code_ids[x]) for x in raw[i]]+[end,tok.eos_token_id];return pre+target,len(pre)
