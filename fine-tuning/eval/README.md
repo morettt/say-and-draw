@@ -19,7 +19,7 @@ python eval/evaluate_dialogue_regression.py --model models/qwen3.5-0.8b --label 
 python eval/evaluate_dialogue_regression.py --model runs/qwen_confirmation/best --label stage5 --output eval/dialogue_runs/stage5.json
 ```
 
-可通过 `ALI_QWEN_API_KEY` 配置裁判密钥，`--cases` 指定其他测试用例，`--judge-model` 指定裁判模型。
+默认裁判为 `qwen3.8-flash`，请求显式关闭思考模式。可通过 `ALI_QWEN_API_KEY` 配置裁判密钥，`--cases` 指定其他测试用例，`--judge-model` 指定裁判模型。
 终端逐题显示问题、实时生成的回答和生成耗时，随后显示每题裁判评分进度、分数及评语。报告包含逐题回答、四项分数和理由、平均分及评估配置。比较报告时保持测试用例、裁判和生成参数一致。
 Qwen 训练流水线会在每阶段结束后调用此脚本；`--skip-dialogue-eval` 可跳过。
 
