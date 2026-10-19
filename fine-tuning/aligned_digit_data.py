@@ -1,7 +1,29 @@
-from project_paths import DATA_DIR
+from project_paths import DATA_DIR, DIGIT_DATA
+import json
+from pathlib import Path
 import numpy as np
 
 BASE = DATA_DIR
+CHARS = '0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'
+
+
+def load_raw(path=DIGIT_DATA):
+    path = Path(path)
+    rows = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+    if not rows:
+        raise ValueError(f'轨迹数据不能为空：{path}')
+    for i, row in enumerate(rows):
+        if any(type(row.get(name)) is not int for name in ('source', 'number', 'position', 'digit')):
+            raise ValueError(f'第 {i+1} 行缺少整数标签或来源字段')
+        if not 0 <= row['digit'] < len(CHARS) or row.get('character', CHARS[row['digit']]) != CHARS[row['digit']]:
+            raise ValueError(f'第 {i+1} 行字符标签无效')
+    data = {name: np.asarray([row[name] for row in rows], dtype='int64') for name in ('source','number','position','digit')}
+    data['points'] = np.asarray([row['points'] for row in rows], dtype='float32')
+    if data['points'].shape != (len(rows),64,3) or not np.isfinite(data['points']).all():
+        raise ValueError('每条轨迹必须包含 64 个有效的 [x,y,新笔画标记] 点')
+    if not np.isin(data['points'][:,:,2], [0,1]).all():
+        raise ValueError('新笔画标记必须为 0 或 1')
+    return data
 
 def resample(p,n):
     xy=p[:,:2].astype(np.float64)
@@ -18,7 +40,7 @@ def aligned(p,d):
     return resample(p,64)
 
 def load():
-    a=np.load(BASE/'digits_all.npz')
+    a=load_raw()
     ids=np.array([i for i,d in enumerate(a['digit']) if not (d==1 and np.any(a['points'][i,1:,2]>0))])
     xy=np.stack([aligned(a['points'][i],int(a['digit'][i])) for i in ids]).astype('float32')
     labels=a['digit'][ids].astype('int64')

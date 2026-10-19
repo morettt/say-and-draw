@@ -1,36 +1,31 @@
 """Mixed text/drawing continuation of the best digit+A-Z checkpoint."""
-from project_paths import ROOT, SMOOTH_VQ, QWEN_FP32_DIR, QWEN_CHAT_DIR
+from project_paths import ROOT, QWEN_FP32_DIR, QWEN_CHAT_DIR
 import json,random,time,sys,gc
 from pathlib import Path
 import numpy as np,torch
 from transformers import AutoTokenizer,Qwen3_5ForConditionalGeneration
 SRC=QWEN_FP32_DIR;OUT=QWEN_CHAT_DIR
 OUT.mkdir(parents=True,exist_ok=False);sys.path.insert(0,str(ROOT))
-from aligned_digit_data import load
-from aligned_vq_model import AlignedVQ
+from data_tools.qwen import load_handwriting, encode_example
+from project_paths import QWEN_DRAWING
 from qwen_chat_data import load_rows
-SYSTEM='You are a helpful assistant. Reply normally. For drawing, say a short sentence and then emit <DRAW>, 16 motion codes, <END_DRAW>. Do not emit <CHAT>.'
 CHARS='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'
 torch.set_num_threads(4);torch.manual_seed(1610);rng=random.Random(1610)
-xy,lab,_=load();split=random.Random(42);tr=[];va=[]
-for c in range(36):
- ix=np.flatnonzero(lab==c).tolist();split.shuffle(ix);n=max(1,round(len(ix)*.15));va+=ix[:n];tr+=ix[n:]
-v=AlignedVQ().cuda().eval();v.load_state_dict(torch.load(SMOOTH_VQ,weights_only=False)['model'])
-with torch.no_grad():raw=v.encode(torch.tensor(xy,device='cuda'))[1].cpu().numpy()
-del v;torch.cuda.empty_cache()
+dataset=load_handwriting('draw')
+lab=np.asarray(dataset.labels);raw=np.asarray(dataset.codes);tr=dataset.train.copy();va=dataset.validation.copy()
+SYSTEM=dataset.system
+
 tok=AutoTokenizer.from_pretrained(SRC);draw=tok.convert_tokens_to_ids('<DRAW>');end=tok.convert_tokens_to_ids('<END_DRAW>');cid=[tok.convert_tokens_to_ids(f'<M{i:03d}>') for i in range(256)];ct=torch.tensor(cid,device='cuda')
 def prefix(q,history=None):return tok.apply_chat_template([{'role':'system','content':SYSTEM}]+(history or [])+[{'role':'user','content':q}],tokenize=True,add_generation_prompt=True,enable_thinking=False)['input_ids']
 def textrow(q,a,history=None):
  p=prefix(q,history);return (p+tok.encode(a,add_special_tokens=False)+[tok.eos_token_id],len(p),None)
-templates=['请帮我写一个{kind}{c}。','画一个{kind}{c}给我看看。','请用手写的方式写出{c}。','帮我画{c}。','我想看看{c}的笔迹，请画出来。','写一个{c}。','请画一个{kind}{c}。','Draw the character {c}.','Write character {c}.','Generate handwriting for {c}.']
 def drawrow(i,t=0):
- c=CHARS[lab[i]];q=templates[t].format(c=c,kind='数字' if c.isdigit() else '字母');intro=f'好的，我给你写一个{c}。\n' if t<7 else f'Sure, here is {c}.\n';p=prefix(q);a=tok.encode(intro,add_special_tokens=False)+[draw];start=len(p)+len(a)
- return p+a+[cid[int(z)] for z in raw[i]]+[end,tok.eos_token_id],len(p),start
+ return encode_example(tok,dataset.examples[i][t])
 CHAT_FILE=ROOT/'data'/'qwen'/'chat_stage3.jsonl'
 chat,chat_raw=load_rows(CHAT_FILE)
 chat_rows=[textrow(q,a,h) for q,a,h in chat]
-draw_rows={i:[drawrow(i,t) for t in range(len(templates))] for i in tr+va}
-(OUT/'training_data.json').write_text(json.dumps({'chat':chat_raw,'chat_source':str(CHAT_FILE),'draw_templates':templates,'train_indices':tr,'valid_indices':va,'system':SYSTEM},ensure_ascii=False,indent=2))
+draw_rows={i:[drawrow(i,t) for t in range(len(dataset.examples[i]))] for i in tr+va}
+(OUT/'training_data.json').write_text(json.dumps({'chat':chat_raw,'chat_source':str(CHAT_FILE),'drawing_source':str(QWEN_DRAWING),'train_indices':tr,'valid_indices':va,'system':SYSTEM},ensure_ascii=False,indent=2))
 def batch(rows):
  x=torch.full((len(rows),max(len(r[0]) for r in rows)),tok.pad_token_id,device='cuda',dtype=torch.long);mask=torch.zeros_like(x);y=torch.full_like(x,-100)
  for j,(s,p,_) in enumerate(rows):x[j,:len(s)]=torch.tensor(s,device='cuda');mask[j,:len(s)]=1;y[j,p:len(s)]=x[j,p:len(s)]

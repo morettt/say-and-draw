@@ -3,12 +3,12 @@ import sys,json,time,numpy as np,torch
 from pathlib import Path
 u=Path(__file__).resolve().parent
 sys.path.insert(0,str(u))
-from aligned_digit_data import load
+from aligned_digit_data import load, load_raw
 from aligned_vq_model import AlignedVQ
 prepare_handwriting_outputs()
 torch.set_num_threads(4);torch.manual_seed(1901)
 xy,labels,held=load()
-a=np.load(u/'data'/'digits_all.npz')
+a=load_raw()
 keep=[i for i,d in enumerate(a['digit']) if not(d==1 and np.any(a['points'][i,1:,2]>0))]
 pen=(a['points'][keep,:,2]>0)
 for i,c in enumerate(labels):

@@ -11,13 +11,13 @@ from PIL import Image,ImageDraw
 from PIL import ImageFilter
 u=ROOT
 sys.path.insert(0,str(u))
-from aligned_digit_data import load
+from aligned_digit_data import load, load_raw
 from aligned_vq_model import AlignedVQ
 from causal_vq_model import CausalCodeLM
 from structured_decoder import StructuredStrokeDecoder
 torch.set_num_threads(4)
 chars='0123456789NBACDEFGHIJKLMOPQRSTUVWXYZ'
-xy,labels,held=load();a=np.load(u/'data'/'digits_all.npz')
+xy,labels,held=load();a=load_raw()
 keep=[i for i,d in enumerate(a['digit']) if not(d==1 and np.any(a['points'][i,1:,2]>0))]
 pen=(a['points'][keep,:,2]>0)
 for i,c in enumerate(labels):
@@ -104,7 +104,13 @@ for name in ['structured']:
   free_digits=float(ff[gl<10].mean()),free_letters=float(ff[gl>=10].mean()))
  r['per_char']={c:round(float(ff[gl==i].mean()),4) for i,c in enumerate(chars)}
  print(json.dumps(dict(model=name,**r)),flush=True)
- np.savez_compressed(str(HANDWRITING_EVAL_DIR/(name+tag+'_eval.npz')),recon=y,recon_pen=p,free=fy,free_pen=fp,f1=ff,labels=gl)
+ with (HANDWRITING_EVAL_DIR/(name+tag+'_eval.jsonl')).open('w',encoding='utf-8') as stream:
+  for kind,points,pens,classes in [('reconstruction',y,p,labels[va]),('generated',fy,fp,gl)]:
+   for j,(coords,pen_marks,label) in enumerate(zip(points,pens,classes)):
+    row={'kind':kind,'label':int(label),'points':np.where(np.isfinite(coords),coords,None).tolist(),'pen':pen_marks.tolist()}
+    if kind=='generated':row['f1']=float(ff[j])
+    else:row['source_index']=int(va[j])
+    stream.write(json.dumps(row,ensure_ascii=False,allow_nan=False)+'\n')
  all_results[name]=r
 (HANDWRITING_EVAL_DIR/('evaluation'+tag+'.json')).write_text(json.dumps(all_results,indent=2))
 

@@ -11,7 +11,7 @@ completed stages.
 """
 
 from __future__ import annotations
-from project_paths import ROOT, ALIGNED_VQ, SMOOTH_VQ, STRUCTURED_DECODER, SMALL_RUN_DIR, CAUSAL_GENERATOR
+from project_paths import ROOT, DIGIT_DATA, ALIGNED_VQ, SMOOTH_VQ, STRUCTURED_DECODER, SMALL_RUN_DIR, CAUSAL_GENERATOR
 
 import argparse
 import json
@@ -95,8 +95,8 @@ def outputs_exist(stage: dict) -> bool:
 
 
 def check_environment() -> None:
-    if not (ROOT / "data" / "digits_all.npz").is_file():
-        raise SystemExit("找不到 data/digits_all.npz，请确认当前目录是 fine-tuning。")
+    if not DIGIT_DATA.is_file():
+        raise SystemExit("找不到 data/digits_all.jsonl，请确认当前目录是 fine-tuning。")
 
     # All five original scripts use .cuda() directly.  Fail early with a
     # useful message instead of waiting for the first child process to crash.
