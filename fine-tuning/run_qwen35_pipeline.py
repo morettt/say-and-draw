@@ -22,6 +22,7 @@ import time
 from pathlib import Path
 
 from qwen_model_setup import ensure_qwen_model as prepare_qwen_model
+from training_runs import latest_training_run
 
 
 STATE_PATH = ROOT / "qwen35_pipeline_state.json"
@@ -36,7 +37,7 @@ STAGES = {
         "script": "train_qwen35_handwriting_stage1_repro.py",
         "args": [],
         "model": QWEN_STAGE1_DIR,
-        "outputs": [QWEN_STAGE1_DIR / "training_info.json"],
+        "outputs": [QWEN_STAGE1_DIR / "TRAIN_DONE"],
     },
     2: {
         "name": "FP32 master continuation",
@@ -165,9 +166,27 @@ def run_dialogue_eval(label: str, model: Path, dry_run: bool) -> None:
         raise SystemExit(f"{label} 对话回归评估失败，已停止。")
 
 
+def get_stage(number: int) -> dict:
+    stage = dict(STAGES[number])
+    if number == 1:
+        try:
+            model_dir = latest_training_run(QWEN_STAGE1_DIR)
+        except FileNotFoundError:
+            if (QWEN_STAGE1_DIR / "latest.json").exists() or (QWEN_STAGE1_DIR / "training_info.json").exists():
+                raise
+            stage["model"] = QWEN_STAGE1_DIR
+            stage["outputs"] = [QWEN_STAGE1_DIR / "TRAIN_DONE"]
+        else:
+            stage["model"] = model_dir
+            # Legacy checkpoints have no TRAIN_DONE; retain existing compatibility.
+            marker = "TRAIN_DONE" if (model_dir / "TRAIN_DONE").is_file() else "training_info.json"
+            stage["outputs"] = [model_dir / marker]
+    return stage
+
+
 def validate_previous_stages(number: int) -> None:
     for previous in range(1, number):
-        missing = [p.name for p in STAGES[previous]["outputs"] if not p.is_file()]
+        missing = [p.name for p in get_stage(previous)["outputs"] if not p.is_file()]
         if missing:
             raise SystemExit(
                 f"阶段 {number} 需要先完成阶段 {previous}，缺少产物：{', '.join(missing)}"
@@ -175,7 +194,7 @@ def validate_previous_stages(number: int) -> None:
 
 
 def run_stage(number: int, state: dict, dry_run: bool) -> None:
-    stage = STAGES[number]
+    stage = get_stage(number)
     script = ROOT / stage["script"]
     if not script.is_file():
         raise SystemExit(f"阶段 {number} 缺少脚本：{script.name}")
@@ -199,7 +218,7 @@ def run_stage(number: int, state: dict, dry_run: bool) -> None:
     # run left an incomplete directory, stop with a clear message instead of
     # deleting training artifacts automatically.
     output_dirs = {path.parent for path in stage["outputs"]}
-    blocked = [str(path.relative_to(ROOT)) for path in output_dirs if path.exists() and not outputs_exist(stage)]
+    blocked = [str(path.relative_to(ROOT)) for path in output_dirs if path.exists() and not outputs_exist(stage)] if number >= 2 else []
     if blocked and number >= 2:
         raise SystemExit(
             "发现未完成的阶段目录，原训练脚本不会覆盖它们：\n  - "
@@ -218,6 +237,7 @@ def run_stage(number: int, state: dict, dry_run: bool) -> None:
         save_state(state)
         raise SystemExit(f"阶段 {number} 失败，已停止；可用 --from-stage {number} 继续。")
 
+    stage = get_stage(number)
     missing = [p.name for p in stage["outputs"] if not p.is_file() or p.stat().st_size == 0]
     if missing:
         state[str(number)] = {"status": "failed", "missing_outputs": missing}
@@ -240,7 +260,7 @@ def main() -> None:
     for number in range(args.from_stage, 6):
         run_stage(number, state, args.dry_run)
         if not args.skip_dialogue_eval:
-            run_dialogue_eval(f"stage{number}", STAGES[number]["model"], args.dry_run)
+            run_dialogue_eval(f"stage{number}", get_stage(number)["model"], args.dry_run)
     if not args.dry_run:
         print("\nQwen3.5 五个训练阶段全部完成。", flush=True)
 

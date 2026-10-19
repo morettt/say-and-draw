@@ -24,6 +24,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from project_paths import ROOT
+from training_runs import resolve_model_path
 
 
 DEFAULT_CASES = ROOT / "eval" / "dialogue_holdout.jsonl"
@@ -172,6 +173,7 @@ def judge(api_url: str, api_key: str, model: str, messages: list[dict], answer: 
 
 def main() -> None:
     args = parse_args()
+    args.model = resolve_model_path(args.model)
     api_key = os.getenv("ALI_QWEN_API_KEY", DEFAULT_API_KEY)
     cases = load_cases(args.cases)
     if args.max_new_tokens < 1:

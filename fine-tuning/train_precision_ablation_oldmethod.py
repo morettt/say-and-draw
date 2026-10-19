@@ -1,12 +1,13 @@
 """Controlled continuation: identical BF16 compute, differing AdamW/master precision."""
 from project_paths import ROOT, SMOOTH_VQ, QWEN_STAGE1_DIR, QWEN_PRECISION_DIR
+from training_runs import latest_training_run
 import hashlib,json,random,sys,time
 from pathlib import Path
 import numpy as np
 import torch
 from transformers import AutoTokenizer,Qwen3_5ForConditionalGeneration
 
-SRC=QWEN_STAGE1_DIR
+SRC=latest_training_run(QWEN_STAGE1_DIR)
 RUN=QWEN_PRECISION_DIR;arm=sys.argv[1]
 assert arm in ('bf16','fp32_master')
 OUT=RUN/arm;OUT.mkdir(parents=True,exist_ok=False)
