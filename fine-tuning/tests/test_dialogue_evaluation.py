@@ -25,11 +25,14 @@ class SingleModelEvaluationTests(unittest.TestCase):
             with self.subTest(return_type=type(rendered).__name__):
                 tokenizer = MagicMock()
                 tokenizer.apply_chat_template.return_value = rendered
-                tokenizer.decode.return_value = '回答'
+                tokenizer.decode.return_value = '回答<|im_end|>'
+                tokenizer.eos_token = '<|im_end|>'
+                tokenizer.eos_token_id = 248046
                 tokenizer.pad_token_id = 0
                 model = MagicMock()
                 model.to.return_value = model
                 model.eval.return_value = model
+                model.generation_config.eos_token_id = 248044
                 generated = MagicMock()
                 model.generate.return_value = generated
                 torch = SimpleNamespace(
@@ -54,6 +57,7 @@ class SingleModelEvaluationTests(unittest.TestCase):
                 torch.tensor.assert_called_once_with([[11, 12, 13]], dtype='long', device='cpu')
                 generated.__getitem__.assert_called_once_with((0, slice(3, None)))
                 self.assertEqual(model.generate.call_args.kwargs['pad_token_id'], 0)
+                self.assertEqual(model.generate.call_args.kwargs['eos_token_id'], 248046)
                 self.assertEqual(console.getvalue(), '')
                 logging.set_verbosity_error.assert_called_once()
                 logging.disable_progress_bar.assert_called_once()
